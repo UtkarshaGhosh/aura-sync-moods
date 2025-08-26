@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AuraVisualizer from '@/components/AuraVisualizer';
 import EmotionDetector from '@/components/EmotionDetector';
@@ -8,6 +8,7 @@ import { Music, Settings, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { createPlaylist, addTracksToPlaylist } from '@/lib/spotify';
 
 interface Track {
   id: string;
@@ -16,12 +17,48 @@ interface Track {
   album: string;
   image: string;
   preview_url: string | null;
+  spotify_url?: string;
 }
 
 const Index = () => {
   const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
   const { user, loading, signOut, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [spotifyCredentials, setSpotifyCredentials] = useState<{
+    access_token: string;
+    spotify_user_id: string;
+  } | null>(null);
+
+  // Load Spotify credentials
+  useEffect(() => {
+    const loadSpotifyCredentials = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('access_token, spotify_user_id')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error loading Spotify credentials:', error);
+          return;
+        }
+
+        if (data?.access_token && data?.spotify_user_id) {
+          setSpotifyCredentials({
+            access_token: data.access_token,
+            spotify_user_id: data.spotify_user_id,
+          });
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    loadSpotifyCredentials();
+  }, [user]);
 
   const handleEmotionDetected = async (emotion: string, source: 'webcam' | 'emoji') => {
     setCurrentEmotion(emotion);
@@ -52,11 +89,77 @@ const Index = () => {
   };
 
   const handleSavePlaylist = async (tracks: Track[]) => {
-    // In a real app, this would save to user's Spotify library
-    toast.success('Playlist saved!', {
-      description: `Added ${tracks.length} tracks to your Spotify library`,
-      duration: 3000,
-    });
+    if (!spotifyCredentials) {
+      toast.error('Spotify not connected', {
+        description: 'Please connect your Spotify account in settings.',
+      });
+      return;
+    }
+
+    if (tracks.length === 0) {
+      toast.error('No tracks to save', {
+        description: 'Generate some music recommendations first.',
+      });
+      return;
+    }
+
+    try {
+      const playlistName = `AuraSync - ${currentEmotion.charAt(0).toUpperCase() + currentEmotion.slice(1)} Vibes`;
+      const playlistDescription = `AI-generated playlist for your ${currentEmotion} mood. Created by AuraSync on ${new Date().toLocaleDateString()}`;
+
+      toast.info('Creating playlist...', {
+        description: 'Saving to your Spotify library.',
+      });
+
+      // Create playlist
+      const playlist = await createPlaylist(
+        spotifyCredentials.spotify_user_id,
+        playlistName,
+        playlistDescription,
+        spotifyCredentials.access_token
+      );
+
+      // Get track URIs (only for tracks that have Spotify IDs)
+      const trackUris = tracks
+        .filter(track => track.id && !track.id.startsWith('mock'))
+        .map(track => `spotify:track:${track.id}`);
+
+      if (trackUris.length === 0) {
+        toast.warning('No Spotify tracks to save', {
+          description: 'These recommendations don\'t have Spotify links. Try connecting Spotify for personalized tracks.',
+        });
+        return;
+      }
+
+      // Add tracks to playlist
+      await addTracksToPlaylist(
+        playlist.id,
+        trackUris,
+        spotifyCredentials.access_token
+      );
+
+      toast.success('Playlist saved to Spotify!', {
+        description: `"${playlistName}" with ${trackUris.length} tracks added to your library.`,
+        action: {
+          label: 'Open in Spotify',
+          onClick: () => window.open(playlist.external_urls.spotify, '_blank'),
+        },
+      });
+
+    } catch (error) {
+      console.error('Error saving playlist:', error);
+
+      if (error instanceof Error && error.message === 'SPOTIFY_TOKEN_EXPIRED') {
+        toast.error('Spotify session expired', {
+          description: 'Please reconnect your Spotify account in settings.',
+        });
+        setSpotifyCredentials(null);
+      } else {
+        toast.error('Failed to save playlist', {
+          description: error instanceof Error ? error.message : 'Please try again.',
+        });
+      }
+    }
   };
 
   const handleLogout = async () => {
