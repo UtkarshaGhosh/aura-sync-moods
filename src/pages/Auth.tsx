@@ -72,12 +72,15 @@ const Auth: React.FC = () => {
   };
 
   const handleResendConfirmation = useCallback(async (email: string) => {
+    const redirectUrl = getRedirectUrl();
+    console.log('Resend confirmation with redirect URL:', redirectUrl);
+
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: redirectUrl,
         }
       });
 
