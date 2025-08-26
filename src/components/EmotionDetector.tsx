@@ -291,58 +291,113 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
     try {
       setIsDetecting(true);
-      
+      setError(null);
+
       // Create image element
       const img = new Image();
       const canvas = canvasRef.current;
-      
-      if (!canvas) return;
-      
+
+      if (!canvas) {
+        setError('Canvas not available');
+        setIsDetecting(false);
+        return;
+      }
+
       img.onload = async () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        
-        ctx.drawImage(img, 0, 0);
-        
-        // Detect emotions in uploaded image
-        const detections = await faceapi
-          .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-          .withFaceExpressions();
-        
-        if (detections.length > 0) {
-          const expressions = detections[0].expressions;
-          const maxExpression = Object.keys(expressions).reduce((a, b) => 
-            expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
-          );
-          
-          const emotionMap: { [key: string]: string } = {
-            'happy': 'happy',
-            'sad': 'sad',
-            'angry': 'angry',
-            'surprised': 'surprised',
-            'neutral': 'neutral',
-            'disgusted': 'angry',
-            'fearful': 'surprised'
-          };
-          
-          const mappedEmotion = emotionMap[maxExpression] || 'neutral';
-          setDetectedEmotion(mappedEmotion);
-          onEmotionDetected(mappedEmotion, 'upload');
-        } else {
-          setError('No face detected in the uploaded image');
+        try {
+          // Calculate display dimensions while maintaining aspect ratio
+          const containerRect = canvas.parentElement?.getBoundingClientRect();
+          if (!containerRect) return;
+
+          const aspectRatio = img.width / img.height;
+          const containerAspectRatio = containerRect.width / containerRect.height;
+
+          let displayWidth, displayHeight;
+          if (aspectRatio > containerAspectRatio) {
+            displayWidth = containerRect.width;
+            displayHeight = containerRect.width / aspectRatio;
+          } else {
+            displayHeight = containerRect.height;
+            displayWidth = containerRect.height * aspectRatio;
+          }
+
+          canvas.width = displayWidth;
+          canvas.height = displayHeight;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          // Clear and draw the image
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
+
+          // Detect emotions in uploaded image
+          const detections = await faceapi
+            .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+            .withFaceExpressions();
+
+          if (detections.length > 0) {
+            const detection = detections[0];
+            const expressions = detection.expressions;
+            const maxExpression = Object.keys(expressions).reduce((a, b) =>
+              expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
+            );
+
+            // Draw detection box
+            const { x, y, width, height } = detection.detection.box;
+            const scaleX = displayWidth / img.width;
+            const scaleY = displayHeight / img.height;
+
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * scaleX, y * scaleY, width * scaleX, height * scaleY);
+
+            // Draw emotion label
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '16px Arial';
+            const confidence = expressions[maxExpression as keyof typeof expressions];
+            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, x * scaleX, y * scaleY - 10);
+
+            const emotionMap: { [key: string]: string } = {
+              'happy': 'happy',
+              'sad': 'sad',
+              'angry': 'angry',
+              'surprised': 'surprised',
+              'neutral': 'neutral',
+              'disgusted': 'angry',
+              'fearful': 'surprised'
+            };
+
+            const mappedEmotion = emotionMap[maxExpression] || 'neutral';
+            setDetectedEmotion(mappedEmotion);
+            onEmotionDetected(mappedEmotion, 'upload');
+          } else {
+            setError('No face detected in the uploaded image');
+          }
+
+          setIsDetecting(false);
+        } catch (err) {
+          console.error('Error processing image:', err);
+          setError('Failed to analyze the image');
+          setIsDetecting(false);
         }
-        
+      };
+
+      img.onerror = () => {
+        setError('Failed to load the image');
         setIsDetecting(false);
       };
-      
+
       img.src = URL.createObjectURL(file);
     } catch (err) {
       console.error('Error processing uploaded image:', err);
       setError('Failed to process uploaded image');
       setIsDetecting(false);
+    }
+
+    // Clear the file input
+    if (event.target) {
+      event.target.value = '';
     }
   };
 
