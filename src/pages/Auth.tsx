@@ -59,6 +59,32 @@ const Auth: React.FC = () => {
     }
   };
 
+  const handleResendConfirmation = useCallback(async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        }
+      });
+
+      if (error) {
+        toast.error('Failed to resend confirmation', {
+          description: error.message,
+        });
+      } else {
+        toast.success('Confirmation email sent!', {
+          description: 'Please check your email inbox.',
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to resend confirmation', {
+        description: 'Please try again later.',
+      });
+    }
+  }, []);
+
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
