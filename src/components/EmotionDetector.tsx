@@ -73,15 +73,15 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const startWebcam = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Load models first
       await loadModels();
-      
+
       // Get webcam stream
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: 640 }, 
+        video: {
+          width: { ideal: 640 },
           height: { ideal: 480 },
           facingMode: 'user'
         }
@@ -90,30 +90,55 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
-        
-        // Wait for video to be ready
+
+        // Wait for video to be ready and play
         await new Promise<void>((resolve, reject) => {
-          if (!videoRef.current) return reject();
-          
-          videoRef.current.onloadedmetadata = async () => {
+          if (!videoRef.current) return reject(new Error('Video element not found'));
+
+          const video = videoRef.current;
+
+          // Set up event listeners
+          const onLoadedMetadata = async () => {
             try {
-              await videoRef.current!.play();
-              setIsWebcamActive(true);
-              setIsLoading(false);
-              resolve();
+              // Ensure video is ready to play
+              if (video.readyState >= 2) {
+                await video.play();
+                video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                video.removeEventListener('error', onError);
+                resolve();
+              }
             } catch (err) {
+              video.removeEventListener('loadedmetadata', onLoadedMetadata);
+              video.removeEventListener('error', onError);
               reject(err);
             }
           };
+
+          const onError = (err: Event) => {
+            video.removeEventListener('loadedmetadata', onLoadedMetadata);
+            video.removeEventListener('error', onError);
+            reject(new Error('Video failed to load'));
+          };
+
+          video.addEventListener('loadedmetadata', onLoadedMetadata);
+          video.addEventListener('error', onError);
+
+          // If metadata is already loaded
+          if (video.readyState >= 2) {
+            onLoadedMetadata();
+          }
         });
 
-        // Start emotion detection loop
-        startEmotionDetection();
+        setIsWebcamActive(true);
+        setIsLoading(false);
+
+        // Start emotion detection loop after a short delay
+        setTimeout(startEmotionDetection, 500);
       }
     } catch (error) {
       console.error('Error starting webcam:', error);
       let errorMessage = 'Camera access failed';
-      
+
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
           errorMessage = 'Camera permission denied. Please allow camera access and try again.';
@@ -121,11 +146,21 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           errorMessage = 'No camera found. Please connect a camera and try again.';
         } else if (error.name === 'NotReadableError') {
           errorMessage = 'Camera is in use by another application.';
+        } else if (error.name === 'AbortError') {
+          errorMessage = 'Camera access was interrupted.';
+        } else if (error.message.includes('Video failed to load')) {
+          errorMessage = 'Video playback failed. Try refreshing the page.';
         }
       }
-      
+
       setError(errorMessage);
       setIsLoading(false);
+
+      // Clean up on error
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     }
   };
 
