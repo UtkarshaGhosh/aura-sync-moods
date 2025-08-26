@@ -51,35 +51,46 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
   // Load face-api.js models
   const loadModels = useCallback(async () => {
-    if (modelsLoaded) return;
-    
+    if (modelsLoaded) {
+      addDebugLog('✅ Models already loaded, skipping...');
+      return;
+    }
+
+    addDebugLog('📦 Starting model loading...');
     setIsModelLoading(true);
     try {
       const MODEL_URL = '/models'; // We'll need to copy models to public folder
-      
+
       // Try to load models, fallback to CDN if local fails
       try {
+        addDebugLog('🔄 Attempting to load models from local path...');
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
-      } catch {
+        addDebugLog('✅ Models loaded from local path');
+      } catch (localError) {
+        addDebugLog(`❌ Local model loading failed: ${localError}`);
+        addDebugLog('🌐 Falling back to CDN...');
         // Fallback to CDN
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
           faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
         ]);
+        addDebugLog('✅ Models loaded from CDN');
       }
-      
+
       setModelsLoaded(true);
       setError(null);
+      addDebugLog('🎉 All models loaded successfully!');
     } catch (err) {
+      addDebugLog(`❌ Model loading completely failed: ${err}`);
       console.error('Error loading face-api models:', err);
       setError('Failed to load emotion detection models');
     } finally {
       setIsModelLoading(false);
     }
-  }, [modelsLoaded]);
+  }, [modelsLoaded, addDebugLog]);
 
   // Start webcam with canvas rendering
   const startWebcam = async () => {
