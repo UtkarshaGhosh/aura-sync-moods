@@ -122,6 +122,7 @@ const Auth: React.FC = () => {
           });
         }
       } else {
+        setPendingEmail(null);
         toast.success('Welcome back!');
         navigate('/');
       }
