@@ -118,9 +118,9 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleConnectSpotify = () => {
+  const handleConnectSpotify = async () => {
     try {
-      const authUrl = getSpotifyAuthUrl();
+      const authUrl = await getSpotifyAuthUrl();
       window.location.href = authUrl;
     } catch (error) {
       console.error('Spotify auth error:', error);
