@@ -47,6 +47,7 @@ const Auth: React.FC = () => {
           });
         }
       } else {
+        setPendingEmail(email);
         toast.success('Account created!', {
           description: 'Check your email to confirm your account.',
         });
