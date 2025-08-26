@@ -20,6 +20,7 @@ interface Track {
   album: string;
   image: string;
   preview_url: string | null;
+  spotify_url?: string;
 }
 
 interface MusicRecommendationsProps {
@@ -350,6 +351,17 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
                   <p className="font-medium truncate">{track.name}</p>
                   <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
                 </div>
+
+                {track.spotify_url && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(track.spotify_url, '_blank')}
+                    className="p-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -361,14 +373,23 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         )}
 
         {tracks.length > 0 && (
-          <Button 
+          <Button
             onClick={handleSavePlaylist}
             className="w-full glow-primary"
             size="lg"
+            disabled={!isSpotifyConnected}
           >
             <Save className="w-5 h-5 mr-2" />
-            Save Playlist to Spotify
+            {isSpotifyConnected ? 'Save Playlist to Spotify' : 'Connect Spotify to Save'}
           </Button>
+        )}
+
+        {tracks.length > 0 && !isSpotifyConnected && (
+          <p className="text-center text-sm text-muted-foreground">
+            <a href="/profile" className="text-primary hover:underline">
+              Connect Spotify in settings
+            </a> to save playlists to your library
+          </p>
         )}
       </div>
     </Card>
