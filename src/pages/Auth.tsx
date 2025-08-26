@@ -13,7 +13,67 @@ import { useNavigate } from 'react-router-dom';
 const Auth: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [confirmationStatus, setConfirmationStatus] = useState<'checking' | 'confirmed' | 'error' | null>(null);
   const navigate = useNavigate();
+
+  // Handle email confirmation on page load
+  useEffect(() => {
+    const handleEmailConfirmation = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('access_token');
+      const refreshToken = urlParams.get('refresh_token');
+      const type = urlParams.get('type');
+      const error = urlParams.get('error_description');
+
+      if (error) {
+        console.error('Email confirmation error:', error);
+        toast.error('Email confirmation failed', {
+          description: error,
+        });
+        setConfirmationStatus('error');
+        return;
+      }
+
+      if (type === 'signup' && accessToken && refreshToken) {
+        setConfirmationStatus('checking');
+        console.log('Processing email confirmation...');
+
+        try {
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (sessionError) {
+            console.error('Session error:', sessionError);
+            toast.error('Failed to confirm email', {
+              description: sessionError.message,
+            });
+            setConfirmationStatus('error');
+          } else {
+            console.log('Email confirmed successfully:', data.user?.email);
+            setConfirmationStatus('confirmed');
+            toast.success('Email confirmed successfully!', {
+              description: 'You can now sign in to your account.',
+            });
+            setPendingEmail(null);
+
+            // Clear URL parameters and redirect
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(() => {
+              navigate('/');
+            }, 2000);
+          }
+        } catch (error) {
+          console.error('Confirmation error:', error);
+          setConfirmationStatus('error');
+          toast.error('Failed to process email confirmation');
+        }
+      }
+    };
+
+    handleEmailConfirmation();
+  }, [navigate]);
 
   const getRedirectUrl = () => {
     // Get the current URL without any paths
