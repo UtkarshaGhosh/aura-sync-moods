@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import AuraVisualizer from '@/components/AuraVisualizer';
 import EmotionDetector from '@/components/EmotionDetector';
 import MusicRecommendations from '@/components/MusicRecommendations';
