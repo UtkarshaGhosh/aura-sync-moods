@@ -561,30 +561,42 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           <div className="relative">
             {/* Video Display */}
             <div className="relative rounded-lg overflow-hidden bg-muted/50" style={{ aspectRatio: '4/3' }}>
-              {isWebcamActive ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Video error:', e);
-                      setError('Video playback failed');
-                    }}
-                    onLoadedMetadata={() => {
-                      console.log('Video metadata loaded');
-                    }}
-                  />
-                  {/* Canvas overlay for face detection */}
-                  <canvas
-                    ref={canvasRef}
-                    className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-80"
-                  />
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
+              {/* Video element - always rendered but conditionally visible */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${isWebcamActive ? 'block' : 'hidden'}`}
+                onError={(e) => {
+                  addDebugLog(`❌ Video error event: ${e.type}`);
+                  console.error('Video error:', e);
+                  setError('Video playback failed');
+                }}
+                onLoadedMetadata={() => {
+                  addDebugLog('📊 Video onLoadedMetadata event fired');
+                  console.log('Video metadata loaded');
+                }}
+                onCanPlay={() => {
+                  addDebugLog('🎬 Video onCanPlay event fired');
+                }}
+                onPlay={() => {
+                  addDebugLog('▶️ Video onPlay event fired');
+                }}
+                onPause={() => {
+                  addDebugLog('⏸️ Video onPause event fired');
+                }}
+              />
+
+              {/* Canvas overlay for face detection - always rendered */}
+              <canvas
+                ref={canvasRef}
+                className={`absolute top-0 left-0 w-full h-full pointer-events-none opacity-80 ${isWebcamActive ? 'block' : 'hidden'}`}
+              />
+
+              {/* Placeholder content when webcam is off */}
+              {!isWebcamActive && (
+                <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center text-muted-foreground">
                     {isLoading ? (
                       <>
