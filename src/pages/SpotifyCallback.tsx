@@ -42,32 +42,19 @@ const SpotifyCallback: React.FC = () => {
       }
 
       try {
-        // Verify state parameter
-        const storedState = localStorage.getItem('spotify_auth_state');
-        if (!storedState || storedState !== state) {
-          throw new Error('State mismatch. Potential security issue.');
-        }
+        // Exchange authorization code for tokens using PKCE
+        const tokenData = await exchangeCodeForTokens(code, state);
 
-        localStorage.removeItem('spotify_auth_state');
-
-        // For now, we'll simulate the token exchange since it should be done server-side
-        // In a real implementation, send the code to your backend
-        console.log('Authorization code received:', code);
-        
-        // Simulate successful token exchange
-        const mockSpotifyData = {
-          spotify_user_id: 'mock_user_' + Math.random().toString(36).substr(2, 9),
-          access_token: 'mock_access_token_' + Math.random().toString(36).substr(2, 9),
-          refresh_token: 'mock_refresh_token_' + Math.random().toString(36).substr(2, 9),
-        };
+        // Get user profile from Spotify
+        const spotifyProfile = await getSpotifyProfile(tokenData.access_token);
 
         // Update user profile with Spotify data
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
-            spotify_user_id: mockSpotifyData.spotify_user_id,
-            access_token: mockSpotifyData.access_token,
-            refresh_token: mockSpotifyData.refresh_token,
+            spotify_user_id: spotifyProfile.id,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
           })
           .eq('id', user.id);
 
