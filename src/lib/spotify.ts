@@ -66,19 +66,49 @@ export const getSpotifyAuthUrl = (): string => {
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
 };
 
-// Exchange authorization code for access token
+// Exchange authorization code for access token using PKCE
 export const exchangeCodeForTokens = async (code: string, state: string) => {
   const storedState = localStorage.getItem('spotify_auth_state');
-  
+  const codeVerifier = localStorage.getItem('spotify_code_verifier');
+
   if (!storedState || storedState !== state) {
     throw new Error('State mismatch. Potential CSRF attack.');
   }
 
-  localStorage.removeItem('spotify_auth_state');
+  if (!codeVerifier) {
+    throw new Error('Code verifier not found. Please restart the authentication process.');
+  }
 
-  // In a real app, this should be done on the server to keep client secret secure
-  // For now, we'll use the implicit grant flow or PKCE
-  throw new Error('Token exchange must be implemented on the server side for security.');
+  localStorage.removeItem('spotify_auth_state');
+  localStorage.removeItem('spotify_code_verifier');
+
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: SPOTIFY_REDIRECT_URI,
+      client_id: SPOTIFY_CLIENT_ID!,
+      code_verifier: codeVerifier,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Token exchange failed: ${errorData.error_description || response.statusText}`);
+  }
+
+  const tokenData = await response.json();
+
+  return {
+    access_token: tokenData.access_token,
+    refresh_token: tokenData.refresh_token,
+    expires_in: tokenData.expires_in,
+    token_type: tokenData.token_type,
+  };
 };
 
 // Make authenticated request to Spotify API
