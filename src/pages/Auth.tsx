@@ -145,6 +145,25 @@ const Auth: React.FC = () => {
           <p className="text-muted-foreground">Connect your emotions to music</p>
         </div>
 
+        {pendingEmail && (
+          <Alert className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
+              <div className="flex items-center justify-between">
+                <span>Waiting for email confirmation for <strong>{pendingEmail}</strong></span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleResendConfirmation(pendingEmail)}
+                  className="ml-2 h-8"
+                >
+                  Resend Email
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="glass border-border/50">
           <div className="p-6">
             <Tabs defaultValue="signin" className="w-full">
