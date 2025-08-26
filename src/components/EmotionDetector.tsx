@@ -160,12 +160,24 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       try {
         setIsDetecting(true);
-        
-        // Set canvas dimensions to match video
+
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+
+        // Skip if video is not ready
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          setIsDetecting(false);
+          return;
+        }
+
+        // Set canvas dimensions to match the display size
+        const rect = video.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        // Calculate scale factors for drawing detections
+        const scaleX = rect.width / video.videoWidth;
+        const scaleY = rect.height / video.videoHeight;
 
         // Detect faces and expressions
         const detections = await faceapi
@@ -176,22 +188,28 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          
+
           if (detections.length > 0) {
             // Draw face detection box
             const detection = detections[0];
             const { x, y, width, height } = detection.detection.box;
-            
+
+            // Scale coordinates to match display size
+            const scaledX = x * scaleX;
+            const scaledY = y * scaleY;
+            const scaledWidth = width * scaleX;
+            const scaledHeight = height * scaleY;
+
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, width, height);
-            
+            ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
             // Get dominant emotion
             const expressions = detection.expressions;
-            const maxExpression = Object.keys(expressions).reduce((a, b) => 
+            const maxExpression = Object.keys(expressions).reduce((a, b) =>
               expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
             );
-            
+
             // Map face-api emotions to our emotions
             const emotionMap: { [key: string]: string } = {
               'happy': 'happy',
@@ -202,29 +220,29 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               'disgusted': 'angry',
               'fearful': 'surprised'
             };
-            
+
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             const confidence = expressions[maxExpression as keyof typeof expressions];
-            
+
             // Only update if confidence is high enough
-            if (confidence > 0.5) {
+            if (confidence > 0.4) {
               setDetectedEmotion(mappedEmotion);
               onEmotionDetected(mappedEmotion, 'webcam');
             }
-            
+
             // Draw emotion label
             ctx.fillStyle = '#00ff00';
-            ctx.font = '16px Arial';
-            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, x, y - 10);
+            ctx.font = `${Math.max(12, scaledWidth * 0.08)}px Arial`;
+            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX, scaledY - 10);
           }
         }
-        
+
         setIsDetecting(false);
       } catch (err) {
         console.error('Error in emotion detection:', err);
         setIsDetecting(false);
       }
-    }, 1000); // Check every second
+    }, 1500); // Check every 1.5 seconds
   };
 
   // Handle file upload for image emotion detection
