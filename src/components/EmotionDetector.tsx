@@ -170,7 +170,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         };
 
         const onCanPlay = async () => {
-          addDebugLog('🎬 Video can play event fired');
+          addDebugLog('��� Video can play event fired');
           try {
             await video.play();
             addDebugLog('✅ Video playing after canplay');
@@ -288,10 +288,17 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
   // Real emotion detection with face-api.js
   const startEmotionDetection = () => {
-    if (!modelsLoaded || !videoRef.current || !canvasRef.current) return;
+    if (!modelsLoaded || !videoRef.current || !canvasRef.current) {
+      addDebugLog('❌ Cannot start detection: missing requirements');
+      return;
+    }
 
+    addDebugLog('🧠 Emotion detection loop started');
     intervalRef.current = setInterval(async () => {
-      if (!videoRef.current || !canvasRef.current || !modelsLoaded) return;
+      if (!videoRef.current || !canvasRef.current || !modelsLoaded) {
+        addDebugLog('❌ Detection stopped: missing refs or models');
+        return;
+      }
 
       try {
         setIsDetecting(true);
@@ -301,9 +308,12 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
         // Skip if video is not ready
         if (video.videoWidth === 0 || video.videoHeight === 0) {
+          addDebugLog('⏳ Video not ready for detection');
           setIsDetecting(false);
           return;
         }
+
+        addDebugLog(`🔍 Processing frame: ${video.videoWidth}x${video.videoHeight}`);
 
         // Set canvas dimensions to match the display size
         const rect = video.getBoundingClientRect();
@@ -313,11 +323,14 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         // Calculate scale factors for drawing detections
         const scaleX = rect.width / video.videoWidth;
         const scaleY = rect.height / video.videoHeight;
+        addDebugLog(`📐 Scale factors: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)}`);
 
         // Detect faces and expressions
         const detections = await faceapi
           .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
           .withFaceExpressions();
+
+        addDebugLog(`👤 Detected ${detections.length} faces`);
 
         // Clear canvas and draw detections
         const ctx = canvas.getContext('2d');
@@ -359,21 +372,27 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             const confidence = expressions[maxExpression as keyof typeof expressions];
 
+            addDebugLog(`😊 Detected emotion: ${maxExpression} (${(confidence * 100).toFixed(0)}%)`);
+
             // Only update if confidence is high enough
             if (confidence > 0.4) {
               setDetectedEmotion(mappedEmotion);
               onEmotionDetected(mappedEmotion, 'webcam');
+              addDebugLog(`✅ Emotion updated to: ${mappedEmotion}`);
             }
 
             // Draw emotion label
             ctx.fillStyle = '#00ff00';
             ctx.font = `${Math.max(12, scaledWidth * 0.08)}px Arial`;
             ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX, scaledY - 10);
+          } else {
+            addDebugLog('👤 No faces detected in frame');
           }
         }
 
         setIsDetecting(false);
       } catch (err) {
+        addDebugLog(`❌ Detection error: ${err}`);
         console.error('Error in emotion detection:', err);
         setIsDetecting(false);
       }
