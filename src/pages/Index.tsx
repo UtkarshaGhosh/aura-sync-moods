@@ -21,6 +21,7 @@ interface Track {
 const Index = () => {
   const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
   const { user, loading, signOut, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleEmotionDetected = async (emotion: string, source: 'webcam' | 'emoji') => {
     setCurrentEmotion(emotion);
@@ -103,7 +104,7 @@ const Index = () => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </Button>
