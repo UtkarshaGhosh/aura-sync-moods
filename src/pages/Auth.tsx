@@ -95,11 +95,18 @@ const Auth: React.FC = () => {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
+    console.log('Attempting to sign in with email:', email);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Clear any existing session first
+      await supabase.auth.signOut();
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
+      console.log('Sign in response:', { data, error });
 
       if (error) {
         console.error('Sign in error:', error);
@@ -110,7 +117,7 @@ const Auth: React.FC = () => {
         } else if (error.message.includes('Email not confirmed')) {
           setPendingEmail(email);
           toast.error('Email not confirmed', {
-            description: 'Please check your email for a confirmation link, or click below to resend.',
+            description: 'Try refreshing the page, or click below to resend confirmation.',
             action: {
               label: 'Resend Email',
               onClick: () => handleResendConfirmation(email),
@@ -123,6 +130,7 @@ const Auth: React.FC = () => {
         }
       } else {
         setPendingEmail(null);
+        console.log('Sign in successful:', data.user?.email);
         toast.success('Welcome back!');
         navigate('/');
       }
