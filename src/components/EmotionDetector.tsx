@@ -320,17 +320,31 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           
           <div className="relative">
             {/* Video Display */}
-            <div className="relative rounded-lg overflow-hidden">
+            <div className="relative rounded-lg overflow-hidden bg-muted/50" style={{ aspectRatio: '4/3' }}>
               {isWebcamActive ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-48 object-cover bg-muted"
-                />
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Video error:', e);
+                      setError('Video playback failed');
+                    }}
+                    onLoadedMetadata={() => {
+                      console.log('Video metadata loaded');
+                    }}
+                  />
+                  {/* Canvas overlay for face detection */}
+                  <canvas
+                    ref={canvasRef}
+                    className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-80"
+                  />
+                </>
               ) : (
-                <div className="w-full h-48 bg-muted/50 rounded-lg flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center text-muted-foreground">
                     {isLoading ? (
                       <>
@@ -340,7 +354,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                     ) : error ? (
                       <>
                         <AlertTriangle className="w-12 h-12 mx-auto mb-2 opacity-50 text-red-400" />
-                        <p className="text-sm text-red-400">{error}</p>
+                        <p className="text-sm text-red-400 max-w-xs">{error}</p>
                       </>
                     ) : (
                       <>
@@ -351,14 +365,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                   </div>
                 </div>
               )}
-              
-              {/* Canvas overlay for face detection */}
-              <canvas
-                ref={canvasRef}
-                className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                style={{ display: isWebcamActive ? 'block' : 'none' }}
-              />
-              
+
               {/* Detection indicator */}
               {isDetecting && (
                 <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
