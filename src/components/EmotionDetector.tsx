@@ -780,6 +780,28 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               >
                 Test Debug
               </Button>
+              <Button
+                onClick={() => {
+                  addDebugLog('🔄 Manual component refresh triggered');
+                  setIsWebcamActive(false);
+                  setIsLoading(false);
+                  setError(null);
+                  setDetectedEmotion(null);
+                  if (streamRef.current) {
+                    streamRef.current.getTracks().forEach(track => track.stop());
+                    streamRef.current = null;
+                  }
+                  if (videoRef.current) {
+                    videoRef.current.srcObject = null;
+                  }
+                  addDebugLog('✅ Component state reset');
+                }}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                Reset
+              </Button>
             </div>
           </div>
         )}
