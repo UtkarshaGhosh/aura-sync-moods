@@ -83,14 +83,23 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
   // Start webcam with canvas rendering
   const startWebcam = async () => {
+    addDebugLog('🔄 Starting webcam initialization...');
     setIsLoading(true);
     setError(null);
 
     try {
+      addDebugLog('📱 Checking media devices support...');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia not supported');
+      }
+
       // Load models first
+      addDebugLog('🤖 Loading AI models...');
       await loadModels();
+      addDebugLog('✅ Models loaded successfully');
 
       // Get webcam stream
+      addDebugLog('📹 Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 640 },
@@ -98,60 +107,117 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           facingMode: 'user'
         }
       });
+      addDebugLog(`✅ Camera stream obtained: ${stream.getVideoTracks().length} video tracks`);
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
+      if (!videoRef.current) {
+        throw new Error('Video element reference is null');
+      }
 
-        // Wait for video to be ready and play
-        await new Promise<void>((resolve, reject) => {
-          if (!videoRef.current) return reject(new Error('Video element not found'));
+      const video = videoRef.current;
+      addDebugLog(`🎥 Video element found: ${video.tagName}`);
 
-          const video = videoRef.current;
+      // Set stream
+      video.srcObject = stream;
+      streamRef.current = stream;
+      addDebugLog('🔗 Stream assigned to video element');
 
-          // Set up event listeners
-          const onLoadedMetadata = async () => {
-            try {
-              // Ensure video is ready to play
-              if (video.readyState >= 2) {
-                await video.play();
-                video.removeEventListener('loadedmetadata', onLoadedMetadata);
-                video.removeEventListener('error', onError);
-                resolve();
-              }
-            } catch (err) {
+      // Wait for video to be ready and play
+      addDebugLog('⏳ Waiting for video metadata...');
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          addDebugLog('❌ Timeout waiting for video metadata');
+          reject(new Error('Timeout waiting for video metadata'));
+        }, 10000); // 10 second timeout
+
+        // Set up event listeners
+        const onLoadedMetadata = async () => {
+          clearTimeout(timeout);
+          addDebugLog(`📊 Video metadata loaded: ${video.videoWidth}x${video.videoHeight}, readyState: ${video.readyState}`);
+
+          try {
+            // Ensure video is ready to play
+            if (video.readyState >= 2) {
+              addDebugLog('▶️ Attempting to play video...');
+              await video.play();
+              addDebugLog('✅ Video playing successfully');
+
               video.removeEventListener('loadedmetadata', onLoadedMetadata);
               video.removeEventListener('error', onError);
-              reject(err);
+              video.removeEventListener('canplay', onCanPlay);
+              resolve();
+            } else {
+              addDebugLog(`⏳ Video not ready (readyState: ${video.readyState}), waiting...`);
+              // Wait for canplay event
             }
-          };
-
-          const onError = (err: Event) => {
+          } catch (err) {
+            addDebugLog(`❌ Error playing video: ${err}`);
             video.removeEventListener('loadedmetadata', onLoadedMetadata);
             video.removeEventListener('error', onError);
-            reject(new Error('Video failed to load'));
-          };
-
-          video.addEventListener('loadedmetadata', onLoadedMetadata);
-          video.addEventListener('error', onError);
-
-          // If metadata is already loaded
-          if (video.readyState >= 2) {
-            onLoadedMetadata();
+            video.removeEventListener('canplay', onCanPlay);
+            reject(err);
           }
-        });
+        };
 
-        setIsWebcamActive(true);
-        setIsLoading(false);
+        const onCanPlay = async () => {
+          addDebugLog('🎬 Video can play event fired');
+          try {
+            await video.play();
+            addDebugLog('✅ Video playing after canplay');
+            clearTimeout(timeout);
+            video.removeEventListener('loadedmetadata', onLoadedMetadata);
+            video.removeEventListener('error', onError);
+            video.removeEventListener('canplay', onCanPlay);
+            resolve();
+          } catch (err) {
+            addDebugLog(`❌ Error playing video on canplay: ${err}`);
+            clearTimeout(timeout);
+            video.removeEventListener('loadedmetadata', onLoadedMetadata);
+            video.removeEventListener('error', onError);
+            video.removeEventListener('canplay', onCanPlay);
+            reject(err);
+          }
+        };
 
-        // Start emotion detection loop after a short delay
-        setTimeout(startEmotionDetection, 500);
-      }
+        const onError = (err: Event) => {
+          clearTimeout(timeout);
+          addDebugLog(`❌ Video error event: ${err.type}`);
+          video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          video.removeEventListener('error', onError);
+          video.removeEventListener('canplay', onCanPlay);
+          reject(new Error('Video failed to load'));
+        };
+
+        video.addEventListener('loadedmetadata', onLoadedMetadata);
+        video.addEventListener('error', onError);
+        video.addEventListener('canplay', onCanPlay);
+
+        // Check if already loaded
+        if (video.readyState >= 2) {
+          addDebugLog('📊 Video already has metadata loaded');
+          onLoadedMetadata();
+        } else if (video.readyState >= 3) {
+          addDebugLog('🎬 Video already can play');
+          onCanPlay();
+        }
+      });
+
+      setIsWebcamActive(true);
+      setIsLoading(false);
+      addDebugLog('🎉 Webcam started successfully!');
+
+      // Start emotion detection loop after a short delay
+      setTimeout(() => {
+        addDebugLog('🧠 Starting emotion detection...');
+        startEmotionDetection();
+      }, 500);
+
     } catch (error) {
+      addDebugLog(`❌ Webcam startup failed: ${error}`);
       console.error('Error starting webcam:', error);
       let errorMessage = 'Camera access failed';
 
       if (error instanceof Error) {
+        addDebugLog(`Error details: ${error.name} - ${error.message}`);
         if (error.name === 'NotAllowedError') {
           errorMessage = 'Camera permission denied. Please allow camera access and try again.';
         } else if (error.name === 'NotFoundError') {
@@ -162,6 +228,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           errorMessage = 'Camera access was interrupted.';
         } else if (error.message.includes('Video failed to load')) {
           errorMessage = 'Video playback failed. Try refreshing the page.';
+        } else if (error.message.includes('getUserMedia not supported')) {
+          errorMessage = 'Camera not supported in this browser.';
+        } else if (error.message.includes('Timeout')) {
+          errorMessage = 'Camera initialization timed out. Try again.';
         }
       }
 
