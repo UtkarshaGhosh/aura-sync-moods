@@ -538,11 +538,31 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     onEmotionDetected(emotion, 'emoji');
   };
 
+  // Component initialization
   useEffect(() => {
+    addDebugLog('🚀 EmotionDetector component mounted');
+    addDebugLog(`Initial refs - Video: ${videoRef.current ? 'Available' : 'NULL'}, Canvas: ${canvasRef.current ? 'Available' : 'NULL'}`);
+
+    // Small delay to ensure refs are set
+    setTimeout(() => {
+      addDebugLog(`After delay refs - Video: ${videoRef.current ? 'Available' : 'NULL'}, Canvas: ${canvasRef.current ? 'Available' : 'NULL'}`);
+    }, 100);
+
     return () => {
+      addDebugLog('🔥 EmotionDetector component unmounting');
       stopWebcam();
     };
-  }, []);
+  }, [addDebugLog]);
+
+  // Monitor ref changes
+  useEffect(() => {
+    if (videoRef.current) {
+      addDebugLog('✅ Video ref now available');
+    }
+    if (canvasRef.current) {
+      addDebugLog('✅ Canvas ref now available');
+    }
+  }, [videoRef.current, canvasRef.current, addDebugLog]);
 
   return (
     <Card className={cn("glass border-border/50", className)}>
