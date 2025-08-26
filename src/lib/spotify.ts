@@ -45,14 +45,18 @@ export interface SpotifyPlaylist {
   };
 }
 
-// Generate Spotify authorization URL
-export const getSpotifyAuthUrl = (): string => {
+// Generate Spotify authorization URL with PKCE
+export const getSpotifyAuthUrl = async (): Promise<string> => {
   if (!SPOTIFY_CLIENT_ID) {
     throw new Error('Spotify Client ID not configured. Please add VITE_SPOTIFY_CLIENT_ID to your environment variables.');
   }
 
   const state = generateRandomString(16);
+  const codeVerifier = generateRandomString(128);
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
   localStorage.setItem('spotify_auth_state', state);
+  localStorage.setItem('spotify_code_verifier', codeVerifier);
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -60,7 +64,9 @@ export const getSpotifyAuthUrl = (): string => {
     scope: SCOPES,
     redirect_uri: SPOTIFY_REDIRECT_URI,
     state: state,
-    show_dialog: 'true', // Force user to approve app again
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+    show_dialog: 'true',
   });
 
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
