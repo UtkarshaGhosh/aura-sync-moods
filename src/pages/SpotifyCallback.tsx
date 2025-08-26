@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { exchangeCodeForTokens, getSpotifyProfile } from '@/lib/spotify';
 
 const SpotifyCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
