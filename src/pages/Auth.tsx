@@ -15,6 +15,13 @@ const Auth: React.FC = () => {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const getRedirectUrl = () => {
+    // Get the current URL without any paths
+    const currentUrl = window.location.origin;
+    console.log('Current origin for email redirect:', currentUrl);
+    return currentUrl;
+  };
+
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -24,12 +31,15 @@ const Auth: React.FC = () => {
     const password = formData.get('password') as string;
     const displayName = formData.get('displayName') as string;
 
+    const redirectUrl = getRedirectUrl();
+    console.log('Sign up with redirect URL:', redirectUrl);
+
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: redirectUrl,
           data: {
             display_name: displayName,
           }
