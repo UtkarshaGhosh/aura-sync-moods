@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { getSpotifyAuthUrl } from '@/lib/spotify';
 
 interface UserProfile {
   id: string;
@@ -118,10 +119,15 @@ const Profile: React.FC = () => {
   };
 
   const handleConnectSpotify = () => {
-    // TODO: Implement Spotify OAuth
-    toast.info('Spotify connection coming soon!', {
-      description: 'This feature will be available in the next update.',
-    });
+    try {
+      const authUrl = getSpotifyAuthUrl();
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Spotify auth error:', error);
+      toast.error('Failed to start Spotify connection', {
+        description: error instanceof Error ? error.message : 'Please check your configuration.',
+      });
+    }
   };
 
   const handleDisconnectSpotify = async () => {
