@@ -39,6 +39,16 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Debug logging function
+  const addDebugLog = useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(logMessage);
+    if (debugMode) {
+      setDebugLogs(prev => [...prev.slice(-9), logMessage]); // Keep last 10 logs
+    }
+  }, [debugMode]);
+
   // Load face-api.js models
   const loadModels = useCallback(async () => {
     if (modelsLoaded) return;
