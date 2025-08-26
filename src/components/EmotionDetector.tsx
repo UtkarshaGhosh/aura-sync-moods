@@ -111,12 +111,28 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       while (!videoRef.current && retries < maxRetries) {
         addDebugLog(`⏳ Video element not ready, retry ${retries + 1}/${maxRetries}`);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Force a re-render to ensure DOM is updated
+        setIsLoading(prev => prev);
+        await new Promise(resolve => setTimeout(resolve, 200));
         retries++;
       }
 
       if (!videoRef.current) {
-        throw new Error('Video element reference is null after waiting');
+        addDebugLog('❌ Video element still not available, forcing component update...');
+        // Try one more time after forcing a state update
+        setError('Initializing video element...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setError(null);
+
+        if (!videoRef.current) {
+          throw new Error('Video element reference is null after waiting and retrying');
+        }
+      }
+
+      // Also check canvas ref
+      if (!canvasRef.current) {
+        addDebugLog('❌ Canvas element not available');
+        throw new Error('Canvas element reference is null');
       }
 
       addDebugLog('✅ Video element found!');
