@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Auth: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -79,8 +80,13 @@ const Auth: React.FC = () => {
             description: 'Please check your email and password.',
           });
         } else if (error.message.includes('Email not confirmed')) {
+          setPendingEmail(email);
           toast.error('Email not confirmed', {
-            description: 'Please check your email and click the confirmation link.',
+            description: 'Please check your email for a confirmation link, or click below to resend.',
+            action: {
+              label: 'Resend Email',
+              onClick: () => handleResendConfirmation(email),
+            },
           });
         } else {
           toast.error('Sign in failed', {
