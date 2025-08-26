@@ -248,24 +248,31 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
   // Stop webcam
   const stopWebcam = () => {
+    addDebugLog('🛑 Stopping webcam...');
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+      addDebugLog('⏹️ Emotion detection interval cleared');
     }
-    
+
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      const tracks = streamRef.current.getTracks();
+      addDebugLog(`🚫 Stopping ${tracks.length} media tracks`);
+      tracks.forEach(track => track.stop());
       streamRef.current = null;
     }
-    
+
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      addDebugLog('🔌 Video element disconnected');
     }
-    
+
     setIsWebcamActive(false);
     setIsDetecting(false);
     setError(null);
     setIsLoading(false);
+    addDebugLog('✅ Webcam stopped successfully');
   };
 
   // Real emotion detection with face-api.js
