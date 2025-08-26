@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Play, Pause, Save, Music, Shuffle } from 'lucide-react';
+import { Play, Pause, Save, Music, Shuffle, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  getRecommendations,
+  getEmotionAudioFeatures,
+  convertSpotifyTrack,
+  SpotifyTrack
+} from '@/lib/spotify';
 
 interface Track {
   id: string;
@@ -132,20 +141,133 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   onSavePlaylist,
   className
 }) => {
+  const { user } = useAuth();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [spotifyAccessToken, setSpotifyAccessToken] = useState<string | null>(null);
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+
+  // Load Spotify credentials
+  useEffect(() => {
+    const loadSpotifyCredentials = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('access_token, spotify_user_id')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error loading Spotify credentials:', error);
+          return;
+        }
+
+        if (data?.access_token && data?.spotify_user_id) {
+          setSpotifyAccessToken(data.access_token);
+          setIsSpotifyConnected(true);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    loadSpotifyCredentials();
+  }, [user]);
+
+  const generatePlaylistFromSpotify = async () => {
+    if (!spotifyAccessToken) {
+      throw new Error('Spotify not connected');
+    }
+
+    const audioFeatures = getEmotionAudioFeatures(emotion);
+
+    try {
+      const response = await getRecommendations(spotifyAccessToken, {
+        seedGenres: getGenresForEmotion(emotion),
+        ...audioFeatures,
+        limit: 10,
+      });
+
+      return response.tracks.map(convertSpotifyTrack);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'SPOTIFY_TOKEN_EXPIRED') {
+        // Token expired, user needs to reconnect
+        setIsSpotifyConnected(false);
+        setSpotifyAccessToken(null);
+        toast.error('Spotify session expired', {
+          description: 'Please reconnect your Spotify account in settings.',
+        });
+      }
+      throw error;
+    }
+  };
+
+  const generatePlaylistFromMock = async () => {
+    // Fallback to mock data
+    const emotionTracks = mockRecommendations[emotion] || mockRecommendations.neutral;
+    return emotionTracks;
+  };
 
   const generatePlaylist = async () => {
     setIsGenerating(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const emotionTracks = mockRecommendations[emotion] || mockRecommendations.neutral;
-    setTracks(emotionTracks);
-    setIsGenerating(false);
+
+    try {
+      let newTracks: Track[];
+
+      if (isSpotifyConnected && spotifyAccessToken) {
+        try {
+          newTracks = await generatePlaylistFromSpotify();
+          toast.success('Recommendations from Spotify!', {
+            description: 'Generated personalized music based on your mood.',
+          });
+        } catch (error) {
+          console.error('Spotify API error:', error);
+          newTracks = await generatePlaylistFromMock();
+          toast.info('Using sample recommendations', {
+            description: 'Connect Spotify for personalized music.',
+          });
+        }
+      } else {
+        newTracks = await generatePlaylistFromMock();
+        if (user) {
+          toast.info('Using sample recommendations', {
+            description: 'Connect Spotify in settings for personalized music.',
+          });
+        }
+      }
+
+      setTracks(newTracks);
+    } catch (error) {
+      console.error('Error generating playlist:', error);
+      toast.error('Failed to generate recommendations');
+      // Fallback to mock data
+      const emotionTracks = mockRecommendations[emotion] || mockRecommendations.neutral;
+      setTracks(emotionTracks);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Helper function to get genres for emotions
+  const getGenresForEmotion = (emotion: string): string[] => {
+    switch (emotion.toLowerCase()) {
+      case 'happy':
+        return ['pop', 'dance', 'funk'];
+      case 'sad':
+        return ['blues', 'indie', 'acoustic'];
+      case 'angry':
+        return ['rock', 'metal', 'punk'];
+      case 'calm':
+        return ['ambient', 'classical', 'chill'];
+      case 'excited':
+        return ['electronic', 'pop', 'dance'];
+      default:
+        return ['pop', 'indie', 'alternative'];
+    }
   };
 
   const handlePlayPause = (trackId: string) => {
