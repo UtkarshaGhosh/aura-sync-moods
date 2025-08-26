@@ -25,32 +25,73 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [detectedEmotion, setDetectedEmotion] = useState<string | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const startWebcam = async () => {
+    setIsLoading(true);
+    setError(null);
+
     try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported by this browser');
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: 640,
-          height: 480,
+          width: { ideal: 640 },
+          height: { ideal: 480 },
           facingMode: 'user'
-        }
+        },
+        audio: false
       });
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
 
-        // Explicitly start playing the video
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(console.error);
+        // Wait for video to be ready and play
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            if (videoRef.current) {
+              await videoRef.current.play();
+              setIsWebcamActive(true);
+              setIsLoading(false);
+            }
+          } catch (playError) {
+            console.error('Error playing video:', playError);
+            setError('Failed to start video playback');
+            setIsLoading(false);
+          }
         };
 
-        setIsWebcamActive(true);
+        // Handle errors
+        videoRef.current.onerror = () => {
+          setError('Video playback error');
+          setIsLoading(false);
+        };
       }
     } catch (error) {
       console.error('Error accessing webcam:', error);
+      let errorMessage = 'Camera access denied or unavailable';
+
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'Camera permission denied. Please allow camera access.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No camera found on this device.';
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = 'Camera is already in use by another application.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      setError(errorMessage);
+      setIsLoading(false);
     }
   };
 
@@ -59,8 +100,13 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setIsWebcamActive(false);
     setIsDetecting(false);
+    setError(null);
+    setIsLoading(false);
   };
 
   const handleEmotionSelect = (emotion: string) => {
@@ -115,8 +161,22 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             ) : (
               <div className="w-full h-48 bg-muted/50 rounded-lg flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
-                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Webcam off</p>
+                  {isLoading ? (
+                    <>
+                      <div className="w-12 h-12 mx-auto mb-2 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                      <p>Starting camera...</p>
+                    </>
+                  ) : error ? (
+                    <>
+                      <AlertTriangle className="w-12 h-12 mx-auto mb-2 opacity-50 text-red-400" />
+                      <p className="text-sm text-red-400">{error}</p>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Webcam off</p>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -128,9 +188,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               variant={isWebcamActive ? "destructive" : "default"}
               size="sm"
               className="flex-1"
+              disabled={isLoading}
             >
               {isWebcamActive ? <CameraOff className="w-4 h-4 mr-2" /> : <Camera className="w-4 h-4 mr-2" />}
-              {isWebcamActive ? 'Stop Camera' : 'Start Camera'}
+              {isLoading ? 'Starting...' : isWebcamActive ? 'Stop Camera' : 'Start Camera'}
             </Button>
             
             {isWebcamActive && (
