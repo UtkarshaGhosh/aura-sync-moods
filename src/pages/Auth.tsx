@@ -228,7 +228,25 @@ const Auth: React.FC = () => {
           <p className="text-muted-foreground">Connect your emotions to music</p>
         </div>
 
-        {pendingEmail && (
+        {confirmationStatus === 'checking' && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+            <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              Processing email confirmation...
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {confirmationStatus === 'confirmed' && (
+          <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="text-green-800 dark:text-green-200">
+              Email confirmed successfully! Redirecting to your dashboard...
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {pendingEmail && !confirmationStatus && (
           <Alert className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
             <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="text-amber-800 dark:text-amber-200">
