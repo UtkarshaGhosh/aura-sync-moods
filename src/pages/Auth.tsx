@@ -161,14 +161,28 @@ const Auth: React.FC = () => {
             <AlertDescription className="text-amber-800 dark:text-amber-200">
               <div className="flex items-center justify-between">
                 <span>Waiting for email confirmation for <strong>{pendingEmail}</strong></span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleResendConfirmation(pendingEmail)}
-                  className="ml-2 h-8"
-                >
-                  Resend Email
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleResendConfirmation(pendingEmail)}
+                    className="h-8"
+                  >
+                    Resend Email
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPendingEmail(null);
+                      localStorage.clear();
+                      window.location.reload();
+                    }}
+                    className="h-8"
+                  >
+                    Clear & Refresh
+                  </Button>
+                </div>
               </div>
             </AlertDescription>
           </Alert>
