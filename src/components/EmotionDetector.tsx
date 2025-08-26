@@ -104,6 +104,23 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         throw new Error('getUserMedia not supported');
       }
 
+      // Wait for video element to be available
+      addDebugLog('🎥 Waiting for video element...');
+      let retries = 0;
+      const maxRetries = 10;
+
+      while (!videoRef.current && retries < maxRetries) {
+        addDebugLog(`⏳ Video element not ready, retry ${retries + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+
+      if (!videoRef.current) {
+        throw new Error('Video element reference is null after waiting');
+      }
+
+      addDebugLog('✅ Video element found!');
+
       // Load models first
       addDebugLog('🤖 Loading AI models...');
       await loadModels();
@@ -119,10 +136,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         }
       });
       addDebugLog(`✅ Camera stream obtained: ${stream.getVideoTracks().length} video tracks`);
-
-      if (!videoRef.current) {
-        throw new Error('Video element reference is null');
-      }
 
       const video = videoRef.current;
       addDebugLog(`🎥 Video element found: ${video.tagName}`);
@@ -170,7 +183,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         };
 
         const onCanPlay = async () => {
-          addDebugLog('��� Video can play event fired');
+          addDebugLog('🎬 Video can play event fired');
           try {
             await video.play();
             addDebugLog('✅ Video playing after canplay');
