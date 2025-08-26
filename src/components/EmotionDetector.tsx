@@ -643,6 +643,78 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             <p className="font-semibold text-primary capitalize">{detectedEmotion}</p>
           </div>
         )}
+
+        {/* Debug Panel */}
+        {debugMode && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-muted-foreground">Debug Console</h4>
+              <Button
+                onClick={() => setDebugLogs([])}
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+              >
+                Clear
+              </Button>
+            </div>
+            <div className="bg-black/80 rounded-lg p-3 max-h-40 overflow-y-auto">
+              {debugLogs.length === 0 ? (
+                <p className="text-gray-400 text-xs">No debug logs yet...</p>
+              ) : (
+                <div className="space-y-1">
+                  {debugLogs.map((log, index) => (
+                    <p key={index} className="text-xs font-mono text-green-400 leading-tight">
+                      {log}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setDebugMode(false)}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                Hide Debug
+              </Button>
+              <Button
+                onClick={() => {
+                  addDebugLog('🔍 Manual test log');
+                  addDebugLog(`Video ref: ${videoRef.current ? 'Available' : 'NULL'}`);
+                  addDebugLog(`Canvas ref: ${canvasRef.current ? 'Available' : 'NULL'}`);
+                  addDebugLog(`Stream ref: ${streamRef.current ? 'Available' : 'NULL'}`);
+                  if (videoRef.current) {
+                    const video = videoRef.current;
+                    addDebugLog(`Video state: readyState=${video.readyState}, paused=${video.paused}, ended=${video.ended}`);
+                    addDebugLog(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+                    addDebugLog(`Video src: ${video.src || 'No src'}`);
+                    addDebugLog(`Video srcObject: ${video.srcObject ? 'Set' : 'NULL'}`);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                Test Debug
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Debug toggle for non-debug mode */}
+        {!debugMode && (
+          <Button
+            onClick={() => setDebugMode(true)}
+            variant="outline"
+            size="sm"
+            className="w-full text-xs"
+          >
+            Show Debug Console
+          </Button>
+        )}
       </div>
     </Card>
   );
