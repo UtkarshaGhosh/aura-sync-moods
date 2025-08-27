@@ -33,6 +33,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [debugMode, setDebugMode] = useState(true); // Enable debug mode
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [showHelp, setShowHelp] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
