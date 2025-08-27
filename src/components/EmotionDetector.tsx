@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, Upload } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, Upload, HelpCircle, ChevronDown, Download, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as faceapi from 'face-api.js';
 
@@ -32,6 +33,9 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [debugMode, setDebugMode] = useState(true); // Enable debug mode
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [showHelp, setShowHelp] = useState(false);
+  const [capturedImages, setCapturedImages] = useState<string[]>([]);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,6 +52,23 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       setDebugLogs(prev => [...prev.slice(-9), logMessage]); // Keep last 10 logs
     }
   }, [debugMode]);
+
+  // Get environment info for better error messages
+  const getEnvironmentInfo = () => {
+    const isHTTPS = location.protocol === 'https:';
+    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const browserInfo = navigator.userAgent;
+
+    return {
+      isHTTPS,
+      isLocalhost,
+      isSecure: isHTTPS || isLocalhost,
+      browserInfo: browserInfo.includes('Chrome') ? 'Chrome' :
+                   browserInfo.includes('Firefox') ? 'Firefox' :
+                   browserInfo.includes('Safari') ? 'Safari' :
+                   browserInfo.includes('Edge') ? 'Edge' : 'Unknown'
+    };
+  };
 
   // Load face-api.js models
   const loadModels = useCallback(async () => {
@@ -92,6 +113,20 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     }
   }, [modelsLoaded, addDebugLog]);
 
+  // Check camera permission status
+  const checkCameraPermission = async () => {
+    try {
+      if ('permissions' in navigator) {
+        const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        addDebugLog(`🔐 Camera permission status: ${permission.state}`);
+        return permission.state;
+      }
+    } catch (err) {
+      addDebugLog(`⚠️ Could not check camera permission: ${err}`);
+    }
+    return 'unknown';
+  };
+
   // Start webcam with canvas rendering
   const startWebcam = async () => {
     addDebugLog('🔄 Starting webcam initialization...');
@@ -102,6 +137,26 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       addDebugLog('📱 Checking media devices support...');
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('getUserMedia not supported');
+      }
+
+      // Check environment and security requirements
+      const envInfo = getEnvironmentInfo();
+      addDebugLog(`🌍 Environment: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
+
+      if (!envInfo.isSecure) {
+        addDebugLog('⚠️ Not on secure connection - camera access blocked');
+        setError(`Camera access requires HTTPS. You're currently on ${location.protocol}//. Please use a secure connection or run on localhost for development.`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check permission status
+      const permissionStatus = await checkCameraPermission();
+      if (permissionStatus === 'denied') {
+        addDebugLog('❌ Camera permission explicitly denied');
+        setError('Camera access is blocked. Click the camera icon in your browser\'s address bar, select "Allow", then refresh and try again.');
+        setIsLoading(false);
+        return;
       }
 
       // Wait for video element to be available
@@ -259,19 +314,19 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       if (error instanceof Error) {
         addDebugLog(`Error details: ${error.name} - ${error.message}`);
         if (error.name === 'NotAllowedError') {
-          errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+          errorMessage = 'Camera permission denied. Click the camera icon in your browser\'s address bar to allow access, then try again.';
         } else if (error.name === 'NotFoundError') {
           errorMessage = 'No camera found. Please connect a camera and try again.';
         } else if (error.name === 'NotReadableError') {
-          errorMessage = 'Camera is in use by another application.';
+          errorMessage = 'Camera is in use by another application. Close other apps using the camera and try again.';
         } else if (error.name === 'AbortError') {
-          errorMessage = 'Camera access was interrupted.';
+          errorMessage = 'Camera access was interrupted. Please try again.';
         } else if (error.message.includes('Video failed to load')) {
           errorMessage = 'Video playback failed. Try refreshing the page.';
         } else if (error.message.includes('getUserMedia not supported')) {
-          errorMessage = 'Camera not supported in this browser.';
+          errorMessage = 'Camera not supported in this browser. Try using Chrome, Firefox, or Safari.';
         } else if (error.message.includes('Timeout')) {
-          errorMessage = 'Camera initialization timed out. Try again.';
+          errorMessage = 'Camera initialization timed out. Check your camera connection and try again.';
         }
       }
 
@@ -554,9 +609,112 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     onEmotionDetected(emotion, 'emoji');
   };
 
+  // Capture picture from webcam
+  const captureImage = () => {
+    if (!videoRef.current || !canvasRef.current || !isWebcamActive) {
+      addDebugLog('❌ Cannot capture: webcam not active or refs missing');
+      return;
+    }
+
+    setIsCapturing(true);
+    addDebugLog('📸 Capturing image from webcam...');
+
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      // Create a temporary canvas for capture
+      const captureCanvas = document.createElement('canvas');
+      const captureCtx = captureCanvas.getContext('2d');
+
+      if (!captureCtx) {
+        addDebugLog('❌ Cannot get capture canvas context');
+        setIsCapturing(false);
+        return;
+      }
+
+      // Set canvas size to match video dimensions
+      captureCanvas.width = video.videoWidth;
+      captureCanvas.height = video.videoHeight;
+
+      // Draw the current video frame
+      captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+      // Convert to base64 image
+      const imageData = captureCanvas.toDataURL('image/png');
+
+      // Add to captured images array
+      setCapturedImages(prev => [imageData, ...prev]);
+
+      addDebugLog('✅ Image captured successfully');
+      addDebugLog(`🖼️ Total captured images: ${capturedImages.length + 1}`);
+
+      // Show success feedback
+      setIsCapturing(false);
+
+      // Flash effect
+      const flashOverlay = document.createElement('div');
+      flashOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        opacity: 0.8;
+        pointer-events: none;
+        z-index: 9999;
+        transition: opacity 0.1s ease-out;
+      `;
+      document.body.appendChild(flashOverlay);
+
+      setTimeout(() => {
+        flashOverlay.style.opacity = '0';
+        setTimeout(() => {
+          document.body.removeChild(flashOverlay);
+        }, 100);
+      }, 50);
+
+    } catch (error) {
+      addDebugLog(`❌ Capture failed: ${error}`);
+      console.error('Error capturing image:', error);
+      setIsCapturing(false);
+    }
+  };
+
+  // Download captured image
+  const downloadImage = (imageData: string, index: number) => {
+    const link = document.createElement('a');
+    link.href = imageData;
+    link.download = `aurasync-capture-${Date.now()}-${index + 1}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addDebugLog(`💾 Downloaded image ${index + 1}`);
+  };
+
+  // Delete captured image
+  const deleteImage = (index: number) => {
+    setCapturedImages(prev => prev.filter((_, i) => i !== index));
+    addDebugLog(`🗑️ Deleted image ${index + 1}`);
+  };
+
+  // Clear all captured images
+  const clearAllImages = () => {
+    setCapturedImages([]);
+    addDebugLog('🗑️ Cleared all captured images');
+  };
+
   // Component initialization
   useEffect(() => {
     addDebugLog('🚀 EmotionDetector component mounted');
+
+    // Log environment information
+    const envInfo = getEnvironmentInfo();
+    addDebugLog(`🌍 Environment - Browser: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
+    addDebugLog(`🔒 Secure context: ${envInfo.isSecure}`);
+    addDebugLog(`📱 MediaDevices available: ${!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)}`);
+
     addDebugLog(`Initial refs - Video: ${videoRef.current ? 'Available' : 'NULL'}, Canvas: ${canvasRef.current ? 'Available' : 'NULL'}`);
 
     // Small delay to ensure refs are set
@@ -586,7 +744,15 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         {/* Webcam Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-glow">AI Emotion Detection</h3>
-          
+
+          {/* Camera Requirements Info */}
+          {!isWebcamActive && !error && (
+            <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="text-sm text-blue-400 mb-2">📹 Camera access required for AI emotion detection</p>
+              <p className="text-xs text-blue-300">Your browser will ask for permission to use your camera. Please click "Allow" to continue.</p>
+            </div>
+          )}
+
           {/* Model Loading Status */}
           {isModelLoading && (
             <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
@@ -632,18 +798,42 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
               {/* Placeholder content when webcam is off */}
               {!isWebcamActive && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="text-center text-muted-foreground max-w-md">
                     {isLoading ? (
                       <>
                         <div className="w-12 h-12 mx-auto mb-2 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                         <p>Starting camera...</p>
                       </>
                     ) : error ? (
-                      <>
-                        <AlertTriangle className="w-12 h-12 mx-auto mb-2 opacity-50 text-red-400" />
-                        <p className="text-sm text-red-400 max-w-xs">{error}</p>
-                      </>
+                      <div className="space-y-3">
+                        <AlertTriangle className="w-12 h-12 mx-auto text-red-400" />
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-red-400">Camera Access Issue</p>
+                          <p className="text-xs text-red-300">{error}</p>
+
+                          {error.includes('permission denied') || error.includes('blocked') ? (
+                            <div className="text-left bg-red-500/10 rounded p-3 space-y-2">
+                              <p className="text-xs font-medium text-red-400">To fix this:</p>
+                              <ol className="text-xs text-red-300 space-y-1 list-decimal list-inside">
+                                <li>Look for a camera icon in your browser's address bar</li>
+                                <li>Click it and select "Allow" or "Always allow"</li>
+                                <li>Refresh the page and try again</li>
+                                <li>If no icon appears, check your browser settings</li>
+                              </ol>
+                            </div>
+                          ) : null}
+
+                          <Button
+                            onClick={startWebcam}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                          >
+                            Try Again
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <>
                         <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -664,27 +854,43 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           </div>
 
           {/* Controls */}
-          <div className="flex gap-2">
-            <Button
-              onClick={isWebcamActive ? stopWebcam : startWebcam}
-              variant={isWebcamActive ? "destructive" : "default"}
-              size="sm"
-              className="flex-1"
-              disabled={isLoading || isModelLoading}
-            >
-              {isWebcamActive ? <CameraOff className="w-4 h-4 mr-2" /> : <Camera className="w-4 h-4 mr-2" />}
-              {isLoading ? 'Starting...' : isWebcamActive ? 'Stop Camera' : 'Start Camera'}
-            </Button>
-            
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="outline"
-              size="sm"
-              disabled={isModelLoading || isDetecting}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Photo
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Button
+                onClick={isWebcamActive ? stopWebcam : startWebcam}
+                variant={isWebcamActive ? "destructive" : "default"}
+                size="sm"
+                className="flex-1"
+                disabled={isLoading || isModelLoading}
+              >
+                {isWebcamActive ? <CameraOff className="w-4 h-4 mr-2" /> : <Camera className="w-4 h-4 mr-2" />}
+                {isLoading ? 'Starting...' : isWebcamActive ? 'Stop Camera' : 'Start Camera'}
+              </Button>
+
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                size="sm"
+                disabled={isModelLoading || isDetecting}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Photo
+              </Button>
+            </div>
+
+            {/* Capture Button - Only show when webcam is active */}
+            {isWebcamActive && (
+              <Button
+                onClick={captureImage}
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                disabled={isCapturing || !isWebcamActive}
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                {isCapturing ? 'Capturing...' : 'Take Picture'}
+              </Button>
+            )}
           </div>
           
           {/* Hidden file input */}
@@ -695,6 +901,54 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             onChange={handleFileUpload}
             className="hidden"
           />
+
+          {/* Help Section */}
+          <Collapsible open={showHelp} onOpenChange={setShowHelp}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
+                <HelpCircle className="w-3 h-3 mr-2" />
+                Camera troubleshooting help
+                <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 mt-2">
+              <div className="text-xs space-y-3 bg-muted/30 rounded p-3">
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">If camera access is blocked:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground/80">
+                    <li>Look for a camera icon in your browser's address bar</li>
+                    <li>Click it and change from "Block" to "Allow"</li>
+                    <li>Refresh the page and try again</li>
+                  </ol>
+                </div>
+
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">Browser-specific steps:</p>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-medium">Chrome:</span> Settings → Privacy & Security → Site Settings → Camera
+                    </div>
+                    <div>
+                      <span className="font-medium">Firefox:</span> Settings → Privacy & Security → Permissions → Camera
+                    </div>
+                    <div>
+                      <span className="font-medium">Safari:</span> Safari → Preferences → Websites → Camera
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">Other issues:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground/80">
+                    <li>Close other apps that might be using your camera</li>
+                    <li>Try refreshing the page</li>
+                    <li>Restart your browser</li>
+                    <li>Check if your camera is properly connected</li>
+                  </ul>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Manual Emotion Selection */}
@@ -721,6 +975,63 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           <div className="text-center p-3 bg-primary/10 rounded-lg border border-primary/20">
             <p className="text-sm text-muted-foreground">Current mood:</p>
             <p className="font-semibold text-primary capitalize">{detectedEmotion}</p>
+          </div>
+        )}
+
+        {/* Captured Images Gallery */}
+        {capturedImages.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                Captured Photos ({capturedImages.length})
+              </h4>
+              <Button
+                onClick={clearAllImages}
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Clear All
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+              {capturedImages.map((imageData, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={imageData}
+                    alt={`Captured ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg border border-border/50"
+                  />
+
+                  {/* Image controls overlay */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <Button
+                      onClick={() => downloadImage(imageData, index)}
+                      variant="secondary"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                    >
+                      <Download className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      onClick={() => deleteImage(index)}
+                      variant="destructive"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+
+                  {/* Image number */}
+                  <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
+                    {index + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
