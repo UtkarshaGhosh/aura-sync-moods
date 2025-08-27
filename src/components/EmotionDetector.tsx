@@ -998,21 +998,34 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
         {/* Current Emotion Display */}
         {detectedEmotion && (
-          <div className="relative">
-            <div className="text-center p-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg border border-primary/30 backdrop-blur-sm">
+          <div className={cn("relative", emotionChanged && "emotion-change")}>
+            <div className={cn(
+              "text-center p-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg border border-primary/30 backdrop-blur-sm transition-all duration-700",
+              emotionChanged && "scale-105"
+            )}>
               <div className="mb-3">
-                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+                <div className={cn(
+                  "w-16 h-16 mx-auto mb-3 rounded-full bg-primary/20 flex items-center justify-center transition-all duration-500",
+                  emotionChanged ? "bounce-in emotion-glow-pulse" : "animate-pulse"
+                )}>
                   {emotionEmojis.find(e => e.emotion === detectedEmotion)?.icon && (
                     React.createElement(emotionEmojis.find(e => e.emotion === detectedEmotion)!.icon, {
-                      className: cn('w-8 h-8', emotionEmojis.find(e => e.emotion === detectedEmotion)!.color)
+                      className: cn(
+                        'w-8 h-8 transition-all duration-500',
+                        emotionEmojis.find(e => e.emotion === detectedEmotion)!.color,
+                        emotionChanged && "scale-125"
+                      )
                     })
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground mb-1">Detected Emotion</p>
-                <p className="text-2xl font-bold text-primary capitalize mb-2">{detectedEmotion}</p>
+                <p className={cn(
+                  "text-2xl font-bold text-primary capitalize mb-2 transition-all duration-500",
+                  emotionChanged && "text-3xl"
+                )}>{detectedEmotion}</p>
               </div>
 
-              <div className="space-y-2">
+              <div className={cn("space-y-2", emotionChanged && "slide-in-up")}>
                 <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <span>Generating personalized music...</span>
@@ -1024,8 +1037,16 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               </div>
             </div>
 
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg blur-xl -z-10 animate-pulse"></div>
+            {/* Enhanced glow effect with animation */}
+            <div className={cn(
+              "absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg blur-xl -z-10",
+              emotionChanged ? "emotion-glow-pulse" : "animate-pulse"
+            )}></div>
+
+            {/* Ripple effect on emotion change */}
+            {emotionChanged && (
+              <div className="absolute inset-0 border-2 border-primary/30 rounded-lg ripple-effect"></div>
+            )}
           </div>
         )}
 
