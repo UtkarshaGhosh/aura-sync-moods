@@ -49,6 +49,23 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     }
   }, [debugMode]);
 
+  // Get environment info for better error messages
+  const getEnvironmentInfo = () => {
+    const isHTTPS = location.protocol === 'https:';
+    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const browserInfo = navigator.userAgent;
+
+    return {
+      isHTTPS,
+      isLocalhost,
+      isSecure: isHTTPS || isLocalhost,
+      browserInfo: browserInfo.includes('Chrome') ? 'Chrome' :
+                   browserInfo.includes('Firefox') ? 'Firefox' :
+                   browserInfo.includes('Safari') ? 'Safari' :
+                   browserInfo.includes('Edge') ? 'Edge' : 'Unknown'
+    };
+  };
+
   // Load face-api.js models
   const loadModels = useCallback(async () => {
     if (modelsLoaded) {
