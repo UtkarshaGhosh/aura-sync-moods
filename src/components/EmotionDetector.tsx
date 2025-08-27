@@ -854,27 +854,43 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           </div>
 
           {/* Controls */}
-          <div className="flex gap-2">
-            <Button
-              onClick={isWebcamActive ? stopWebcam : startWebcam}
-              variant={isWebcamActive ? "destructive" : "default"}
-              size="sm"
-              className="flex-1"
-              disabled={isLoading || isModelLoading}
-            >
-              {isWebcamActive ? <CameraOff className="w-4 h-4 mr-2" /> : <Camera className="w-4 h-4 mr-2" />}
-              {isLoading ? 'Starting...' : isWebcamActive ? 'Stop Camera' : 'Start Camera'}
-            </Button>
-            
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="outline"
-              size="sm"
-              disabled={isModelLoading || isDetecting}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Photo
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Button
+                onClick={isWebcamActive ? stopWebcam : startWebcam}
+                variant={isWebcamActive ? "destructive" : "default"}
+                size="sm"
+                className="flex-1"
+                disabled={isLoading || isModelLoading}
+              >
+                {isWebcamActive ? <CameraOff className="w-4 h-4 mr-2" /> : <Camera className="w-4 h-4 mr-2" />}
+                {isLoading ? 'Starting...' : isWebcamActive ? 'Stop Camera' : 'Start Camera'}
+              </Button>
+
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                size="sm"
+                disabled={isModelLoading || isDetecting}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Photo
+              </Button>
+            </div>
+
+            {/* Capture Button - Only show when webcam is active */}
+            {isWebcamActive && (
+              <Button
+                onClick={captureImage}
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                disabled={isCapturing || !isWebcamActive}
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                {isCapturing ? 'Capturing...' : 'Take Picture'}
+              </Button>
+            )}
           </div>
           
           {/* Hidden file input */}
