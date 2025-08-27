@@ -5,7 +5,7 @@ import EmotionDetector from '@/components/EmotionDetector';
 import MusicRecommendations from '@/components/MusicRecommendations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Music, Settings, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles } from 'lucide-react';
+import { Music, Settings, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
