@@ -609,6 +609,102 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     onEmotionDetected(emotion, 'emoji');
   };
 
+  // Capture picture from webcam
+  const captureImage = () => {
+    if (!videoRef.current || !canvasRef.current || !isWebcamActive) {
+      addDebugLog('❌ Cannot capture: webcam not active or refs missing');
+      return;
+    }
+
+    setIsCapturing(true);
+    addDebugLog('📸 Capturing image from webcam...');
+
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      // Create a temporary canvas for capture
+      const captureCanvas = document.createElement('canvas');
+      const captureCtx = captureCanvas.getContext('2d');
+
+      if (!captureCtx) {
+        addDebugLog('❌ Cannot get capture canvas context');
+        setIsCapturing(false);
+        return;
+      }
+
+      // Set canvas size to match video dimensions
+      captureCanvas.width = video.videoWidth;
+      captureCanvas.height = video.videoHeight;
+
+      // Draw the current video frame
+      captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+      // Convert to base64 image
+      const imageData = captureCanvas.toDataURL('image/png');
+
+      // Add to captured images array
+      setCapturedImages(prev => [imageData, ...prev]);
+
+      addDebugLog('✅ Image captured successfully');
+      addDebugLog(`🖼️ Total captured images: ${capturedImages.length + 1}`);
+
+      // Show success feedback
+      setIsCapturing(false);
+
+      // Flash effect
+      const flashOverlay = document.createElement('div');
+      flashOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        opacity: 0.8;
+        pointer-events: none;
+        z-index: 9999;
+        transition: opacity 0.1s ease-out;
+      `;
+      document.body.appendChild(flashOverlay);
+
+      setTimeout(() => {
+        flashOverlay.style.opacity = '0';
+        setTimeout(() => {
+          document.body.removeChild(flashOverlay);
+        }, 100);
+      }, 50);
+
+    } catch (error) {
+      addDebugLog(`❌ Capture failed: ${error}`);
+      console.error('Error capturing image:', error);
+      setIsCapturing(false);
+    }
+  };
+
+  // Download captured image
+  const downloadImage = (imageData: string, index: number) => {
+    const link = document.createElement('a');
+    link.href = imageData;
+    link.download = `aurasync-capture-${Date.now()}-${index + 1}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addDebugLog(`💾 Downloaded image ${index + 1}`);
+  };
+
+  // Delete captured image
+  const deleteImage = (index: number) => {
+    setCapturedImages(prev => prev.filter((_, i) => i !== index));
+    addDebugLog(`🗑️ Deleted image ${index + 1}`);
+  };
+
+  // Clear all captured images
+  const clearAllImages = () => {
+    setCapturedImages([]);
+    addDebugLog('🗑️ Cleared all captured images');
+  };
+
   // Component initialization
   useEffect(() => {
     addDebugLog('🚀 EmotionDetector component mounted');
