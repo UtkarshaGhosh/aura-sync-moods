@@ -236,8 +236,21 @@ const Index = () => {
             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-accent" />
             <h1 className="text-2xl font-bold text-glow">AuraSync</h1>
           </div>
-          
+
           <div className="flex items-center space-x-4">
+            {/* Navigation Menu */}
+            <nav className="hidden md:flex items-center space-x-2">
+              <Button variant="ghost" size="sm" onClick={() => scrollToSection('main-app')}>
+                App
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => scrollToSection('features')}>
+                Features
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => scrollToSection('how-it-works')}>
+                How it Works
+              </Button>
+            </nav>
+
             <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
               <Settings className="w-4 h-4 mr-2" />
               Settings
@@ -245,6 +258,25 @@ const Index = () => {
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Logout
+            </Button>
+          </div>
+        </div>
+
+        {/* Intro Section */}
+        <div className="max-w-4xl mx-auto text-center mt-12 mb-8">
+          <h2 className="text-4xl md:text-5xl font-bold text-glow mb-4">
+            Discover Your Emotional Journey
+          </h2>
+          <p className="text-lg text-muted-foreground mb-6">
+            Experience AI-powered emotion detection that transforms your feelings into personalized music and visual experiences.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <Button onClick={() => scrollToSection('main-app')} size="lg">
+              Start Detecting
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+            <Button variant="outline" onClick={() => scrollToSection('features')} size="lg">
+              Learn More
             </Button>
           </div>
         </div>
