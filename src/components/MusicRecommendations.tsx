@@ -222,14 +222,14 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       if (isSpotifyConnected && spotifyAccessToken) {
         try {
           newTracks = await generatePlaylistFromSpotify();
-          toast.success('Recommendations from Spotify!', {
-            description: 'Generated personalized music based on your mood.',
+          toast.success(`Perfect ${emotion} vibes found!`, {
+            description: `Generated ${newTracks.length} personalized tracks for your ${emotion} mood from Spotify.`,
           });
         } catch (error) {
           console.error('Spotify API error:', error);
           newTracks = await generatePlaylistFromMock();
-          toast.info('Using sample recommendations', {
-            description: 'Connect Spotify for personalized music.',
+          toast.info(`Sample ${emotion} recommendations`, {
+            description: 'Connect Spotify for personalized music matching your emotions.',
           });
         }
       } else {
