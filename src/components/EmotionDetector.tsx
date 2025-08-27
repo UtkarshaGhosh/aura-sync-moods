@@ -663,18 +663,42 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
               {/* Placeholder content when webcam is off */}
               {!isWebcamActive && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="text-center text-muted-foreground max-w-md">
                     {isLoading ? (
                       <>
                         <div className="w-12 h-12 mx-auto mb-2 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                         <p>Starting camera...</p>
                       </>
                     ) : error ? (
-                      <>
-                        <AlertTriangle className="w-12 h-12 mx-auto mb-2 opacity-50 text-red-400" />
-                        <p className="text-sm text-red-400 max-w-xs">{error}</p>
-                      </>
+                      <div className="space-y-3">
+                        <AlertTriangle className="w-12 h-12 mx-auto text-red-400" />
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-red-400">Camera Access Issue</p>
+                          <p className="text-xs text-red-300">{error}</p>
+
+                          {error.includes('permission denied') || error.includes('blocked') ? (
+                            <div className="text-left bg-red-500/10 rounded p-3 space-y-2">
+                              <p className="text-xs font-medium text-red-400">To fix this:</p>
+                              <ol className="text-xs text-red-300 space-y-1 list-decimal list-inside">
+                                <li>Look for a camera icon in your browser's address bar</li>
+                                <li>Click it and select "Allow" or "Always allow"</li>
+                                <li>Refresh the page and try again</li>
+                                <li>If no icon appears, check your browser settings</li>
+                              </ol>
+                            </div>
+                          ) : null}
+
+                          <Button
+                            onClick={startWebcam}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                          >
+                            Try Again
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <>
                         <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
