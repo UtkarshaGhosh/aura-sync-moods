@@ -259,19 +259,19 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       if (error instanceof Error) {
         addDebugLog(`Error details: ${error.name} - ${error.message}`);
         if (error.name === 'NotAllowedError') {
-          errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+          errorMessage = 'Camera permission denied. Click the camera icon in your browser\'s address bar to allow access, then try again.';
         } else if (error.name === 'NotFoundError') {
           errorMessage = 'No camera found. Please connect a camera and try again.';
         } else if (error.name === 'NotReadableError') {
-          errorMessage = 'Camera is in use by another application.';
+          errorMessage = 'Camera is in use by another application. Close other apps using the camera and try again.';
         } else if (error.name === 'AbortError') {
-          errorMessage = 'Camera access was interrupted.';
+          errorMessage = 'Camera access was interrupted. Please try again.';
         } else if (error.message.includes('Video failed to load')) {
           errorMessage = 'Video playback failed. Try refreshing the page.';
         } else if (error.message.includes('getUserMedia not supported')) {
-          errorMessage = 'Camera not supported in this browser.';
+          errorMessage = 'Camera not supported in this browser. Try using Chrome, Firefox, or Safari.';
         } else if (error.message.includes('Timeout')) {
-          errorMessage = 'Camera initialization timed out. Try again.';
+          errorMessage = 'Camera initialization timed out. Check your camera connection and try again.';
         }
       }
 
