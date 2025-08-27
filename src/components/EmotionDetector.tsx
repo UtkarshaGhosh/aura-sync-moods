@@ -707,6 +707,22 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     addDebugLog('🗑️ Cleared all captured images');
   };
 
+  // Handle emotion changes with animations
+  useEffect(() => {
+    if (detectedEmotion && detectedEmotion !== previousEmotion) {
+      addDebugLog(`🎭 Emotion changed: ${previousEmotion} → ${detectedEmotion}`);
+      setEmotionChanged(true);
+      setPreviousEmotion(detectedEmotion);
+
+      // Reset animation state after animation completes
+      const timer = setTimeout(() => {
+        setEmotionChanged(false);
+      }, 800);
+
+      return () => clearTimeout(timer);
+    }
+  }, [detectedEmotion, previousEmotion, addDebugLog]);
+
   // Component initialization
   useEffect(() => {
     addDebugLog('🚀 EmotionDetector component mounted');
