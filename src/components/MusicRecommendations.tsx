@@ -294,19 +294,44 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   return (
     <Card className={cn("glass border-border/50", className)}>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-glow">
-            Music for {emotion ? emotion.charAt(0).toUpperCase() + emotion.slice(1) : 'Your Mood'}
-          </h3>
-          <Button
-            onClick={generatePlaylist}
-            disabled={isGenerating || !emotion}
-            variant="outline"
-            size="sm"
-          >
-            <Shuffle className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Generating...' : 'Refresh'}
-          </Button>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-glow">
+              Music for {emotion ? emotion.charAt(0).toUpperCase() + emotion.slice(1) : 'Your Mood'}
+            </h3>
+            <Button
+              onClick={generatePlaylist}
+              disabled={isGenerating || !emotion}
+              variant="outline"
+              size="sm"
+            >
+              <Shuffle className="w-4 h-4 mr-2" />
+              {isGenerating ? 'Generating...' : 'Refresh'}
+            </Button>
+          </div>
+
+          {/* Emotion-based generation status */}
+          {emotion && (
+            <div className="text-center p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+              <p className="text-sm text-muted-foreground mb-1">
+                {isGenerating ? (
+                  <span className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span>Analyzing your <span className="capitalize font-medium text-primary">{emotion}</span> mood...</span>
+                  </span>
+                ) : (
+                  <span>
+                    Curated for your <span className="capitalize font-medium text-primary">{emotion}</span> mood
+                  </span>
+                )}
+              </p>
+              {isGenerating && (
+                <p className="text-xs text-muted-foreground/70">
+                  Finding tracks that match your emotional state
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {isGenerating ? (
