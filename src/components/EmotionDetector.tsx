@@ -978,6 +978,63 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           </div>
         )}
 
+        {/* Captured Images Gallery */}
+        {capturedImages.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                Captured Photos ({capturedImages.length})
+              </h4>
+              <Button
+                onClick={clearAllImages}
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Clear All
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+              {capturedImages.map((imageData, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={imageData}
+                    alt={`Captured ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg border border-border/50"
+                  />
+
+                  {/* Image controls overlay */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <Button
+                      onClick={() => downloadImage(imageData, index)}
+                      variant="secondary"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                    >
+                      <Download className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      onClick={() => deleteImage(index)}
+                      variant="destructive"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+
+                  {/* Image number */}
+                  <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
+                    {index + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Debug Panel */}
         {debugMode && (
           <div className="space-y-2">
