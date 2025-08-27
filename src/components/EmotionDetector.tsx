@@ -135,10 +135,13 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         throw new Error('getUserMedia not supported');
       }
 
-      // Check if we're on HTTPS (required for camera access in most browsers)
-      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        addDebugLog('⚠️ Not on HTTPS - camera access may be blocked');
-        setError('Camera access requires a secure connection (HTTPS). If you\'re on a local development server, this should work. If not, contact the site administrator.');
+      // Check environment and security requirements
+      const envInfo = getEnvironmentInfo();
+      addDebugLog(`🌍 Environment: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
+
+      if (!envInfo.isSecure) {
+        addDebugLog('⚠️ Not on secure connection - camera access blocked');
+        setError(`Camera access requires HTTPS. You're currently on ${location.protocol}//. Please use a secure connection or run on localhost for development.`);
         setIsLoading(false);
         return;
       }
