@@ -283,11 +283,11 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 container mx-auto px-6 pb-12">
+      <main id="main-app" className="relative z-10 container mx-auto px-6 pb-12">
         <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {/* Left Panel - Emotion Detection */}
           <div className="lg:col-span-1 space-y-6">
-            <EmotionDetector 
+            <EmotionDetector
               onEmotionDetected={handleEmotionDetected}
             />
           </div>
@@ -298,21 +298,21 @@ const Index = () => {
               <div>
                 <h2 className="text-3xl font-bold text-glow mb-2">Your Aura</h2>
                 <p className="text-muted-foreground">
-                  Reflecting your current mood: 
+                  Reflecting your current mood:
                   <span className="capitalize font-medium text-primary ml-1">
                     {currentEmotion}
                   </span>
                 </p>
               </div>
-              
-              <AuraVisualizer 
+
+              <AuraVisualizer
                 emotion={currentEmotion}
                 intensity={0.8}
                 className="w-64 h-64 mx-auto"
               />
-              
+
               <p className="text-sm text-muted-foreground max-w-sm">
-                Your aura changes color and intensity based on your detected emotions, 
+                Your aura changes color and intensity based on your detected emotions,
                 creating a personalized visual representation of your inner state.
               </p>
             </div>
@@ -320,13 +320,122 @@ const Index = () => {
 
           {/* Right Panel - Music Recommendations */}
           <div className="lg:col-span-1 space-y-6">
-            <MusicRecommendations 
+            <MusicRecommendations
               emotion={currentEmotion}
               onSavePlaylist={handleSavePlaylist}
             />
           </div>
         </div>
       </main>
+
+      {/* Features Section */}
+      <section id="features" className="relative z-10 py-16 bg-muted/20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl font-bold text-center text-glow mb-12">Powerful Features</h2>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card className="p-6 text-center glass border-border/50">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">AI Emotion Detection</h3>
+                <p className="text-muted-foreground">
+                  Advanced facial recognition technology analyzes your expressions in real-time to detect emotions with high accuracy.
+                </p>
+              </Card>
+
+              <Card className="p-6 text-center glass border-border/50">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                  <Music className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Personalized Playlists</h3>
+                <p className="text-muted-foreground">
+                  Get music recommendations tailored to your current mood and save them directly to your Spotify account.
+                </p>
+              </Card>
+
+              <Card className="p-6 text-center glass border-border/50">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Dynamic Aura Visualization</h3>
+                <p className="text-muted-foreground">
+                  Watch your aura change colors and patterns based on your emotions, creating a beautiful visual representation.
+                </p>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="relative z-10 py-16">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold text-center text-glow mb-12">How It Works</h2>
+
+            <div className="space-y-12">
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="md:w-1/2">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                    <span className="text-2xl font-bold text-primary">1</span>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">Enable Your Camera</h3>
+                  <p className="text-muted-foreground">
+                    Allow camera access to start emotion detection. Our AI analyzes your facial expressions in real-time while keeping your privacy secure.
+                  </p>
+                </div>
+                <div className="md:w-1/2">
+                  <Card className="p-6 glass border-border/50">
+                    <div className="w-full h-32 bg-muted/50 rounded-lg flex items-center justify-center">
+                      <Camera className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row-reverse items-center gap-8">
+                <div className="md:w-1/2">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                    <span className="text-2xl font-bold text-primary">2</span>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">Emotion Analysis</h3>
+                  <p className="text-muted-foreground">
+                    Our AI processes your expressions and identifies emotions like happiness, sadness, surprise, and more with remarkable accuracy.
+                  </p>
+                </div>
+                <div className="md:w-1/2">
+                  <Card className="p-6 glass border-border/50">
+                    <div className="w-full h-32 bg-muted/50 rounded-lg flex items-center justify-center">
+                      <BarChart3 className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="md:w-1/2">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                    <span className="text-2xl font-bold text-primary">3</span>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">Personalized Experience</h3>
+                  <p className="text-muted-foreground">
+                    Watch your aura transform and receive music recommendations that match your mood. Take photos to capture your emotional moments.
+                  </p>
+                </div>
+                <div className="md:w-1/2">
+                  <Card className="p-6 glass border-border/50">
+                    <div className="w-full h-32 bg-muted/50 rounded-lg flex items-center justify-center">
+                      <Sparkles className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="relative z-10 text-center py-6 text-sm text-muted-foreground">
