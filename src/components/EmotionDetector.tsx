@@ -92,6 +92,20 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     }
   }, [modelsLoaded, addDebugLog]);
 
+  // Check camera permission status
+  const checkCameraPermission = async () => {
+    try {
+      if ('permissions' in navigator) {
+        const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        addDebugLog(`🔐 Camera permission status: ${permission.state}`);
+        return permission.state;
+      }
+    } catch (err) {
+      addDebugLog(`⚠️ Could not check camera permission: ${err}`);
+    }
+    return 'unknown';
+  };
+
   // Start webcam with canvas rendering
   const startWebcam = async () => {
     addDebugLog('🔄 Starting webcam initialization...');
@@ -102,6 +116,23 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       addDebugLog('📱 Checking media devices support...');
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('getUserMedia not supported');
+      }
+
+      // Check if we're on HTTPS (required for camera access in most browsers)
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        addDebugLog('⚠️ Not on HTTPS - camera access may be blocked');
+        setError('Camera access requires a secure connection (HTTPS). If you\'re on a local development server, this should work. If not, contact the site administrator.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Check permission status
+      const permissionStatus = await checkCameraPermission();
+      if (permissionStatus === 'denied') {
+        addDebugLog('❌ Camera permission explicitly denied');
+        setError('Camera access is blocked. Click the camera icon in your browser\'s address bar, select "Allow", then refresh and try again.');
+        setIsLoading(false);
+        return;
       }
 
       // Wait for video element to be available
