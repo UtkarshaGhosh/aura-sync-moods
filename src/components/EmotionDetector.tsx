@@ -608,6 +608,13 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   // Component initialization
   useEffect(() => {
     addDebugLog('🚀 EmotionDetector component mounted');
+
+    // Log environment information
+    const envInfo = getEnvironmentInfo();
+    addDebugLog(`🌍 Environment - Browser: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
+    addDebugLog(`🔒 Secure context: ${envInfo.isSecure}`);
+    addDebugLog(`📱 MediaDevices available: ${!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)}`);
+
     addDebugLog(`Initial refs - Video: ${videoRef.current ? 'Available' : 'NULL'}, Canvas: ${canvasRef.current ? 'Available' : 'NULL'}`);
 
     // Small delay to ensure refs are set
