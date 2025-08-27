@@ -440,10 +440,22 @@ const Index = () => {
       {/* Footer */}
       <footer className="relative z-10 text-center py-6 text-sm text-muted-foreground">
         <p>
-          Powered by emotion detection and Spotify integration • 
+          Powered by emotion detection and Spotify integration •
           <span className="text-primary"> AuraSync</span>
         </p>
       </footer>
+
+      {/* Scroll to Top Button */}
+      {showScrollToTop && (
+        <Button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 rounded-full w-12 h-12 shadow-lg"
+          size="icon"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </Button>
+      )}
     </div>
   );
 };
