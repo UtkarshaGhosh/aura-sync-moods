@@ -29,6 +29,26 @@ const Index = () => {
     access_token: string;
     spotify_user_id: string;
   } | null>(null);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+
+  // Smooth scroll to section
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
+  // Scroll to top
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
 
   // Load Spotify credentials
   useEffect(() => {
