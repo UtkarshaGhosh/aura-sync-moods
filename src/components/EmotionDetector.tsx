@@ -787,6 +787,54 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             onChange={handleFileUpload}
             className="hidden"
           />
+
+          {/* Help Section */}
+          <Collapsible open={showHelp} onOpenChange={setShowHelp}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
+                <HelpCircle className="w-3 h-3 mr-2" />
+                Camera troubleshooting help
+                <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 mt-2">
+              <div className="text-xs space-y-3 bg-muted/30 rounded p-3">
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">If camera access is blocked:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground/80">
+                    <li>Look for a camera icon in your browser's address bar</li>
+                    <li>Click it and change from "Block" to "Allow"</li>
+                    <li>Refresh the page and try again</li>
+                  </ol>
+                </div>
+
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">Browser-specific steps:</p>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-medium">Chrome:</span> Settings → Privacy & Security → Site Settings → Camera
+                    </div>
+                    <div>
+                      <span className="font-medium">Firefox:</span> Settings → Privacy & Security → Permissions → Camera
+                    </div>
+                    <div>
+                      <span className="font-medium">Safari:</span> Safari → Preferences → Websites → Camera
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">Other issues:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground/80">
+                    <li>Close other apps that might be using your camera</li>
+                    <li>Try refreshing the page</li>
+                    <li>Restart your browser</li>
+                    <li>Check if your camera is properly connected</li>
+                  </ul>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Manual Emotion Selection */}
