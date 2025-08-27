@@ -113,9 +113,9 @@ const Index = () => {
       }
     }
     
-    toast.success(`Mood detected: ${emotion}`, {
-      description: `Generating ${emotion} music recommendations...`,
-      duration: 3000,
+    toast.success(`${emotion.charAt(0).toUpperCase() + emotion.slice(1)} mood detected!`, {
+      description: `🎵 Your aura is updating and personalized ${emotion} music is being generated...`,
+      duration: 4000,
     });
   };
 

@@ -36,6 +36,8 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [showHelp, setShowHelp] = useState(false);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [emotionChanged, setEmotionChanged] = useState(false);
+  const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -705,6 +707,22 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     addDebugLog('🗑️ Cleared all captured images');
   };
 
+  // Handle emotion changes with animations
+  useEffect(() => {
+    if (detectedEmotion && detectedEmotion !== previousEmotion) {
+      addDebugLog(`🎭 Emotion changed: ${previousEmotion} → ${detectedEmotion}`);
+      setEmotionChanged(true);
+      setPreviousEmotion(detectedEmotion);
+
+      // Reset animation state after animation completes
+      const timer = setTimeout(() => {
+        setEmotionChanged(false);
+      }, 800);
+
+      return () => clearTimeout(timer);
+    }
+  }, [detectedEmotion, previousEmotion, addDebugLog]);
+
   // Component initialization
   useEffect(() => {
     addDebugLog('🚀 EmotionDetector component mounted');
@@ -797,20 +815,21 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               />
 
               {/* Placeholder content when webcam is off */}
-              {!isWebcamActive && (
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                  <div className="text-center text-muted-foreground max-w-md">
-                    {isLoading ? (
-                      <>
-                        <div className="w-12 h-12 mx-auto mb-2 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                        <p>Starting camera...</p>
-                      </>
-                    ) : error ? (
-                      <div className="space-y-3">
-                        <AlertTriangle className="w-12 h-12 mx-auto text-red-400" />
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-red-400">Camera Access Issue</p>
-                          <p className="text-xs text-red-300">{error}</p>
+          {!isWebcamActive && (
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="text-center text-muted-foreground max-w-md">
+                {isLoading ? (
+                  <>
+                    <div className="w-12 h-12 mx-auto mb-2 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                    <p className="text-sm font-medium">Starting camera...</p>
+                    <p className="text-xs mt-2 text-muted-foreground/70">Preparing AI emotion detection</p>
+                  </>
+                ) : error ? (
+                  <div className="space-y-3">
+                    <AlertTriangle className="w-12 h-12 mx-auto text-red-400" />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-red-400">Camera Access Issue</p>
+                      <p className="text-xs text-red-300">{error}</p>
 
                           {error.includes('permission denied') || error.includes('blocked') ? (
                             <div className="text-left bg-red-500/10 rounded p-3 space-y-2">
@@ -835,11 +854,12 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                         </div>
                       </div>
                     ) : (
-                      <>
-                        <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>Webcam off</p>
-                      </>
-                    )}
+                  <>
+                    <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="font-medium mb-2">AI Emotion Detection Ready</p>
+                    <p className="text-xs text-muted-foreground/70">Start camera to detect emotions and get personalized music</p>
+                  </>
+                )}
                   </div>
                 </div>
               )}
@@ -953,7 +973,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
         {/* Manual Emotion Selection */}
         <div className="space-y-4">
-          <h4 className="text-sm font-medium text-muted-foreground">Or select your mood:</h4>
+          <div className="text-center">
+            <h4 className="text-sm font-medium text-muted-foreground mb-1">Manual Mood Selection</h4>
+            <p className="text-xs text-muted-foreground/70">Click an emotion to instantly get music recommendations</p>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             {emotionEmojis.map(({ emotion, icon: Icon, label, color }) => (
               <Button
@@ -961,9 +984,12 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                 onClick={() => handleEmotionSelect(emotion)}
                 variant={detectedEmotion === emotion ? "default" : "outline"}
                 size="sm"
-                className="h-auto py-3 flex flex-col gap-1"
+                className={cn(
+                  "h-auto py-3 flex flex-col gap-1 transition-all duration-300",
+                  detectedEmotion === emotion && "ring-2 ring-primary/50 shadow-lg scale-105"
+                )}
               >
-                <Icon className={cn("w-5 h-5", color)} />
+                <Icon className={cn("w-5 h-5 transition-all duration-300", color, detectedEmotion === emotion && "scale-110")} />
                 <span className="text-xs">{label}</span>
               </Button>
             ))}
@@ -972,9 +998,55 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
         {/* Current Emotion Display */}
         {detectedEmotion && (
-          <div className="text-center p-3 bg-primary/10 rounded-lg border border-primary/20">
-            <p className="text-sm text-muted-foreground">Current mood:</p>
-            <p className="font-semibold text-primary capitalize">{detectedEmotion}</p>
+          <div className={cn("relative", emotionChanged && "emotion-change")}>
+            <div className={cn(
+              "text-center p-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg border border-primary/30 backdrop-blur-sm transition-all duration-700",
+              emotionChanged && "scale-105"
+            )}>
+              <div className="mb-3">
+                <div className={cn(
+                  "w-16 h-16 mx-auto mb-3 rounded-full bg-primary/20 flex items-center justify-center transition-all duration-500",
+                  emotionChanged ? "bounce-in emotion-glow-pulse" : "animate-pulse"
+                )}>
+                  {emotionEmojis.find(e => e.emotion === detectedEmotion)?.icon && (
+                    React.createElement(emotionEmojis.find(e => e.emotion === detectedEmotion)!.icon, {
+                      className: cn(
+                        'w-8 h-8 transition-all duration-500',
+                        emotionEmojis.find(e => e.emotion === detectedEmotion)!.color,
+                        emotionChanged && "scale-125"
+                      )
+                    })
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">Detected Emotion</p>
+                <p className={cn(
+                  "text-2xl font-bold text-primary capitalize mb-2 transition-all duration-500",
+                  emotionChanged && "text-3xl"
+                )}>{detectedEmotion}</p>
+              </div>
+
+              <div className={cn("space-y-2", emotionChanged && "slide-in-up")}>
+                <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span>Generating personalized music...</span>
+                </div>
+                <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                  <span>Updating your aura visualization</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Enhanced glow effect with animation */}
+            <div className={cn(
+              "absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg blur-xl -z-10",
+              emotionChanged ? "emotion-glow-pulse" : "animate-pulse"
+            )}></div>
+
+            {/* Ripple effect on emotion change */}
+            {emotionChanged && (
+              <div className="absolute inset-0 border-2 border-primary/30 rounded-lg ripple-effect"></div>
+            )}
           </div>
         )}
 
