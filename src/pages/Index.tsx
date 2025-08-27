@@ -50,6 +50,16 @@ const Index = () => {
     });
   };
 
+  // Scroll event listener
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollToTop(window.scrollY > 400);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Load Spotify credentials
   useEffect(() => {
     const loadSpotifyCredentials = async () => {
