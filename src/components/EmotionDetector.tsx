@@ -36,6 +36,8 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [showHelp, setShowHelp] = useState(false);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [emotionChanged, setEmotionChanged] = useState(false);
+  const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
