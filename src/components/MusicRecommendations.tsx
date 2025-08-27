@@ -235,8 +235,8 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       } else {
         newTracks = await generatePlaylistFromMock();
         if (user) {
-          toast.info('Using sample recommendations', {
-            description: 'Connect Spotify in settings for personalized music.',
+          toast.info(`Sample ${emotion} tracks`, {
+            description: 'Connect Spotify in settings for personalized music that matches your emotions.',
           });
         }
       }
