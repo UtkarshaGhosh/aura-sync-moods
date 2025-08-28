@@ -466,7 +466,7 @@ const Index = () => {
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Personalized Experience</h3>
                   <p className="text-muted-foreground">
-                    Watch your aura transform and receive music recommendations that match your mood. Take photos to capture your emotional moments.
+                    Watch your aura transform and receive music recommendations that match your mood. Upload photos to explore different emotional states.
                   </p>
                 </div>
                 <div className="md:w-1/2">
