@@ -134,20 +134,25 @@ const Index = () => {
 
   const handleEmotionDetected = async (emotion: string, source: 'webcam' | 'emoji' | 'upload') => {
     setCurrentEmotion(emotion);
-    
-    // Save to mood_history table
+
+    // Save to mood_history table and get the generated music suggestions
     if (user) {
       try {
-        const { error } = await supabase
+        const { data: moodEntry, error } = await supabase
           .from('mood_history')
           .insert({
             user_id: user.id,
             emotion,
             source
-          });
-        
+          })
+          .select()
+          .single();
+
         if (error) {
           console.error('Error saving mood history:', error);
+        } else if (moodEntry) {
+          console.log('Mood history saved successfully:', moodEntry);
+          // Music suggestions will be saved separately when MusicRecommendations component generates them
         }
       } catch (error) {
         console.error('💥 Error saving mood history:', error);
@@ -156,7 +161,7 @@ const Index = () => {
         }
       }
     }
-    
+
   };
 
   const handleSavePlaylist = async (tracks: Track[]) => {
