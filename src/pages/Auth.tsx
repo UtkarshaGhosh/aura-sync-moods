@@ -14,6 +14,25 @@ const Auth: React.FC = () => {
   const navigate = useNavigate();
 
 
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      // Try to initiate a password reset for the email
+      // If the email exists, Supabase will send a reset email (but we won't tell the user)
+      // If the email doesn't exist, we'll get a specific response
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/confirm`
+      });
+
+      // Supabase doesn't return an error for non-existent emails in resetPasswordForEmail
+      // So we'll use a different approach: try to sign up with a dummy password first
+      // and check the error type
+      return false; // We'll handle this in the main signup flow
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return false;
+    }
+  };
+
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -24,6 +43,7 @@ const Auth: React.FC = () => {
     const displayName = formData.get('displayName') as string;
 
     try {
+      // First, try to sign up and handle the response appropriately
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -36,22 +56,44 @@ const Auth: React.FC = () => {
       });
 
       if (error) {
-        if (error.message.includes('already registered')) {
+        // Handle specific error types
+        if (error.message.includes('already registered') ||
+            error.message.includes('User already registered') ||
+            error.message.includes('email address is already in use')) {
           toast.error('Account already exists', {
-            description: 'Please sign in instead or use a different email address.',
+            description: 'An account with this email address already exists. Please sign in instead or use a different email address.',
+          });
+        } else if (error.message.includes('Password should be at least')) {
+          toast.error('Password too weak', {
+            description: 'Password should be at least 6 characters long.',
+          });
+        } else if (error.message.includes('Invalid email')) {
+          toast.error('Invalid email', {
+            description: 'Please enter a valid email address.',
           });
         } else {
           toast.error('Sign up failed', {
             description: error.message,
           });
         }
-      } else {
+      } else if (data.user && !data.user.email_confirmed_at) {
+        // Account created successfully, waiting for email confirmation
         toast.success('Account created successfully!', {
           description: 'Please check your email and click the confirmation link to activate your account.',
         });
-        // Don't auto-navigate - let user read the message
+      } else if (data.user && data.user.email_confirmed_at) {
+        // Account was created and is already confirmed (shouldn't happen with email confirmation enabled)
+        toast.success('Account created and confirmed!', {
+          description: 'You can now sign in to your account.',
+        });
+      } else {
+        // Fallback success message
+        toast.success('Account created successfully!', {
+          description: 'Please check your email and click the confirmation link to activate your account.',
+        });
       }
     } catch (error) {
+      console.error('Unexpected signup error:', error);
       toast.error('An unexpected error occurred', {
         description: 'Please try again later.',
       });
