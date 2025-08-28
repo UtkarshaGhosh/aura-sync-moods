@@ -27,6 +27,7 @@ interface MusicRecommendationsProps {
   emotion: string;
   onSavePlaylist: (tracks: Track[]) => void;
   className?: string;
+  moodHistoryId?: number; // ID of the mood history entry to link music suggestions to
 }
 
 // Mock data for different emotions
