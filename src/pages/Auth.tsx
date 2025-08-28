@@ -287,10 +287,15 @@ const Auth: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading || !!emailError}>
                     <Music className="w-4 h-4 mr-2" />
                     {isLoading ? 'Creating account...' : 'Create Account'}
                   </Button>
+
+                  <div className="text-xs text-muted-foreground text-center mt-3 p-2 bg-muted/20 rounded">
+                    <p>📧 Each email address can only be used for one account.</p>
+                    <p>You'll receive a confirmation email to activate your account.</p>
+                  </div>
                 </form>
               </TabsContent>
             </Tabs>
