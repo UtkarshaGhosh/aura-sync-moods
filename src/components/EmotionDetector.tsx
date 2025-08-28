@@ -583,6 +583,112 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     onEmotionDetected(emotion, 'emoji');
   };
 
+  // Manual emotion detection trigger
+  const detectEmotionNow = async () => {
+    if (!videoRef.current || !canvasRef.current || !modelsLoaded || !isWebcamActive) {
+      addDebugLog('❌ Cannot detect: requirements not met');
+      return;
+    }
+
+    addDebugLog('🎯 Manual emotion detection triggered');
+    setIsDetecting(true);
+
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        addDebugLog('⏳ Video not ready for manual detection');
+        setIsDetecting(false);
+        return;
+      }
+
+      // Set canvas dimensions
+      const rect = video.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
+      const scaleX = rect.width / video.videoWidth;
+      const scaleY = rect.height / video.videoHeight;
+
+      // Detect faces and expressions
+      addDebugLog('🤖 Running manual face detection...');
+      const detections = await faceapi
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }))
+        .withFaceExpressions();
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (detections.length > 0) {
+          const detection = detections[0];
+          const { x, y, width, height } = detection.detection.box;
+
+          const scaledX = x * scaleX;
+          const scaledY = y * scaleY;
+          const scaledWidth = width * scaleX;
+          const scaledHeight = height * scaleY;
+
+          // Draw detection box with pulsing effect
+          ctx.strokeStyle = '#00ff00';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
+          const expressions = detection.expressions;
+          const maxExpression = Object.keys(expressions).reduce((a, b) =>
+            expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
+          );
+
+          const emotionMap: { [key: string]: string } = {
+            'happy': 'happy',
+            'sad': 'sad',
+            'angry': 'angry',
+            'surprised': 'surprised',
+            'neutral': 'neutral',
+            'disgusted': 'angry',
+            'fearful': 'surprised'
+          };
+
+          const mappedEmotion = emotionMap[maxExpression] || 'neutral';
+          const confidence = expressions[maxExpression as keyof typeof expressions];
+
+          addDebugLog(`🎭 Manual detection result: ${maxExpression} (${(confidence * 100).toFixed(1)}%)`);
+
+          if (confidence > 0.15) {
+            setDetectedEmotion(mappedEmotion);
+            onEmotionDetected(mappedEmotion, 'webcam');
+            addDebugLog(`✅ Manual detection successful: ${mappedEmotion}`);
+          }
+
+          // Draw label with enhanced styling
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.fillRect(scaledX, scaledY - 40, scaledWidth, 30);
+
+          ctx.fillStyle = '#000';
+          ctx.font = `bold ${Math.max(16, scaledWidth * 0.1)}px Arial`;
+          ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX + 5, scaledY - 20);
+        } else {
+          addDebugLog('👤 No faces detected in manual detection');
+          // Draw "no face" indicator
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.fillStyle = '#ff0000';
+          ctx.font = 'bold 24px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('No Face Detected', canvas.width / 2, canvas.height / 2);
+          ctx.textAlign = 'left';
+        }
+      }
+
+      setIsDetecting(false);
+    } catch (error) {
+      addDebugLog(`❌ Manual detection error: ${error}`);
+      setIsDetecting(false);
+    }
+  };
+
   // Capture picture from webcam
   const captureImage = () => {
     if (!videoRef.current || !canvasRef.current || !isWebcamActive) {
