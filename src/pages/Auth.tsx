@@ -31,8 +31,10 @@ const Auth: React.FC = () => {
     const password = formData.get('password') as string;
     const displayName = formData.get('displayName') as string;
 
-    // Clear any previous email errors
+    // Clear any previous errors
     setEmailError('');
+    setSignupError('');
+    setSignupSuccess('');
 
     // Validate email format
     if (!validateEmail(email)) {
