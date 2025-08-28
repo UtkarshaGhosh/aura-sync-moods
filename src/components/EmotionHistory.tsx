@@ -122,6 +122,7 @@ const EmotionHistory: React.FC = () => {
           hint: error.hint,
           fullError: error
         });
+        setError(`Failed to load mood history: ${error.message}`);
       } else {
         setMoodHistory(data || []);
       }
