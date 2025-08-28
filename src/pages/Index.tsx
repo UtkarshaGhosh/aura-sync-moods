@@ -22,6 +22,7 @@ interface Track {
 
 const Index = () => {
   const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
+  const [currentMoodHistoryId, setCurrentMoodHistoryId] = useState<number | null>(null);
   const { user, loading, signOut, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [spotifyCredentials, setSpotifyCredentials] = useState<{
