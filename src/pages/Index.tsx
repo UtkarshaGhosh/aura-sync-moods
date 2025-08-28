@@ -3,7 +3,6 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import AuraVisualizer from '@/components/AuraVisualizer';
 import EmotionDetector from '@/components/EmotionDetector';
 import MusicRecommendations from '@/components/MusicRecommendations';
-import DatabaseDiagnostic from '@/components/DatabaseDiagnostic';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Music, Settings, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
