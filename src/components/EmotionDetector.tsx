@@ -425,7 +425,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             const confidence = expressions[maxExpression as keyof typeof expressions];
 
-            addDebugLog(`🎭 Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
+            addDebugLog(`��� Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
 
             // Lower threshold for better detection
             if (confidence > 0.2) {
@@ -1151,22 +1151,50 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-muted-foreground">Debug Console</h4>
-              <Button
-                onClick={() => setDebugLogs([])}
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-xs"
-              >
-                Clear
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  onClick={() => setDebugLogs([])}
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={() => {
+                    addDebugLog('🔍 Manual system check');
+                    addDebugLog(`Models loaded: ${modelsLoaded}`);
+                    addDebugLog(`Webcam active: ${isWebcamActive}`);
+                    addDebugLog(`Video ref: ${!!videoRef.current}`);
+                    addDebugLog(`Canvas ref: ${!!canvasRef.current}`);
+                    if (videoRef.current) {
+                      const video = videoRef.current;
+                      addDebugLog(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+                      addDebugLog(`Video ready state: ${video.readyState}`);
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                >
+                  Test
+                </Button>
+              </div>
             </div>
             <div className="bg-black/80 rounded-lg p-3 max-h-40 overflow-y-auto">
               {debugLogs.length === 0 ? (
-                <p className="text-gray-400 text-xs">No debug logs yet...</p>
+                <p className="text-gray-400 text-xs">No debug logs yet... Click "Test" to run diagnostics</p>
               ) : (
                 <div className="space-y-1">
                   {debugLogs.map((log, index) => (
-                    <p key={index} className="text-xs font-mono text-green-400 leading-tight">
+                    <p key={index} className={`text-xs font-mono leading-tight ${
+                      log.includes('❌') ? 'text-red-400' :
+                      log.includes('✅') ? 'text-green-400' :
+                      log.includes('⚠️') ? 'text-yellow-400' :
+                      log.includes('🎭') ? 'text-purple-400' :
+                      log.includes('👤') ? 'text-blue-400' :
+                      'text-green-300'
+                    }`}>
                       {log}
                     </p>
                   ))}
@@ -1186,16 +1214,43 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           </div>
         )}
 
-        {/* Debug toggle for non-debug mode */}
+        {/* System Status Summary */}
         {!debugMode && (
-          <Button
-            onClick={() => setDebugMode(true)}
-            variant="outline"
-            size="sm"
-            className="w-full text-xs"
-          >
-            Show Debug Console
-          </Button>
+          <div className="space-y-2">
+            <div className="text-center p-3 bg-muted/20 rounded-lg">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">System Status</h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className={`flex items-center justify-center space-x-1 ${modelsLoaded ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${modelsLoaded ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                  <span>AI Models</span>
+                </div>
+                <div className={`flex items-center justify-center space-x-1 ${isWebcamActive ? 'text-green-400' : 'text-gray-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${isWebcamActive ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                  <span>Camera</span>
+                </div>
+                <div className={`flex items-center justify-center space-x-1 ${detectedEmotion ? 'text-green-400' : 'text-gray-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${detectedEmotion ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                  <span>Detection</span>
+                </div>
+                <div className={`flex items-center justify-center space-x-1 ${error ? 'text-red-400' : 'text-green-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${error ? 'bg-red-400' : 'bg-green-400'}`}></div>
+                  <span>Status</span>
+                </div>
+              </div>
+              {error && (
+                <p className="text-xs text-red-400 mt-2">{error}</p>
+              )}
+            </div>
+
+            <Button
+              onClick={() => setDebugMode(true)}
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+            >
+              Show Debug Console
+            </Button>
+          </div>
         )}
       </div>
     </Card>
