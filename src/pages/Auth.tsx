@@ -134,7 +134,15 @@ const Auth: React.FC = () => {
         console.error('Sign in error:', error);
         if (error.message.includes('Invalid login credentials')) {
           toast.error('Invalid credentials', {
-            description: 'Please check your email and password.',
+            description: 'Please check your email and password. If you just signed up, make sure you\'ve confirmed your email address.',
+          });
+        } else if (error.message.includes('Email not confirmed')) {
+          toast.error('Email not confirmed', {
+            description: 'Please check your email and click the confirmation link before signing in.',
+          });
+        } else if (error.message.includes('User not found')) {
+          toast.error('Account not found', {
+            description: 'No account found with this email address. Please sign up first.',
           });
         } else {
           toast.error('Sign in failed', {
