@@ -73,7 +73,12 @@ const Index = () => {
           .single();
 
         if (error) {
-          console.error('Error loading Spotify credentials:', error);
+          console.error('Error loading Spotify credentials:');
+          console.error('- Code:', error.code);
+          console.error('- Message:', error.message);
+          console.error('- Details:', error.details);
+          console.error('- Hint:', error.hint);
+          console.error('- Full error:', JSON.stringify(error, null, 2));
           return;
         }
 
