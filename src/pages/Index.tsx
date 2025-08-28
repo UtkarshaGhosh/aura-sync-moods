@@ -354,6 +354,7 @@ const Index = () => {
             <MusicRecommendations
               emotion={currentEmotion}
               onSavePlaylist={handleSavePlaylist}
+              moodHistoryId={currentMoodHistoryId}
             />
           </div>
         </div>
