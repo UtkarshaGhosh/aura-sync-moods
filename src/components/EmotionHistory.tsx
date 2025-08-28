@@ -206,6 +206,30 @@ const EmotionHistory: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Card className="glass border-border/50">
+        <div className="p-6 text-center space-y-4">
+          <div className="text-red-500">
+            <h3 className="text-lg font-semibold mb-2">Error Loading Emotion History</h3>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+            <Button onClick={loadMoodHistory} variant="outline">
+              Try Again
+            </Button>
+          </div>
+          <div className="text-xs text-muted-foreground space-y-2">
+            <p><strong>Possible solutions:</strong></p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Make sure you've run the database migration for music_suggestions table</li>
+              <li>Check your internet connection</li>
+              <li>Try refreshing the page</li>
+            </ul>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   const emotionStats = getEmotionStats();
 
   return (
