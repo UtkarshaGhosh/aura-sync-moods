@@ -901,18 +901,56 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               </Button>
             </div>
 
-            {/* Capture Button - Only show when webcam is active */}
+            {/* Detection Controls - Only show when webcam is active */}
             {isWebcamActive && (
-              <Button
-                onClick={captureImage}
-                variant="secondary"
-                size="sm"
-                className="w-full"
-                disabled={isCapturing || !isWebcamActive}
-              >
-                <Camera className="w-4 h-4 mr-2" />
-                {isCapturing ? 'Capturing...' : 'Take Picture'}
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={detectEmotionNow}
+                  variant="default"
+                  size="sm"
+                  disabled={isDetecting || !modelsLoaded || !isWebcamActive}
+                  className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  {isDetecting ? 'Detecting...' : 'Detect Emotion'}
+                </Button>
+
+                <Button
+                  onClick={captureImage}
+                  variant="secondary"
+                  size="sm"
+                  disabled={isCapturing || !isWebcamActive}
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  {isCapturing ? 'Capturing...' : 'Take Picture'}
+                </Button>
+              </div>
+            )}
+
+            {/* Detection Status Indicator */}
+            {isWebcamActive && (
+              <div className="text-center p-2 bg-muted/20 rounded-lg">
+                <div className="flex items-center justify-center space-x-2 text-xs">
+                  {modelsLoaded ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span className="text-green-400">AI Models Ready</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                      <span className="text-yellow-400">Loading AI Models...</span>
+                    </>
+                  )}
+                </div>
+
+                {isDetecting && (
+                  <div className="flex items-center justify-center space-x-2 text-xs mt-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                    <span className="text-blue-400">Analyzing facial expressions...</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           
