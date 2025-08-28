@@ -123,6 +123,14 @@ const SpotifyCallback: React.FC = () => {
                     You can now save AI-generated playlists directly to your Spotify library!
                   </AlertDescription>
                 </Alert>
+                <div className="pt-4">
+                  <Button
+                    onClick={() => window.location.href = 'https://celadon-hotteok-5d416e.netlify.app'}
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    Continue to App
+                  </Button>
+                </div>
               </>
             )}
 
