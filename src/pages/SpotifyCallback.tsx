@@ -114,7 +114,7 @@ const SpotifyCallback: React.FC = () => {
                     Spotify Connected!
                   </h2>
                   <p className="text-muted-foreground">
-                    Your Spotify account has been successfully connected. Redirecting to your profile...
+                    Your Spotify account has been successfully connected. Redirecting to your app...
                   </p>
                 </div>
                 <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
