@@ -384,9 +384,9 @@ const Index = () => {
                 <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
                   <BarChart3 className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">AI Emotion Detection</h3>
+                <h3 className="text-xl font-semibold mb-3">Mood Selection & Photo Analysis</h3>
                 <p className="text-muted-foreground">
-                  Advanced facial recognition technology analyzes your expressions in real-time to detect emotions with high accuracy.
+                  Choose your current emotion from intuitive mood buttons or upload photos for analysis to get personalized recommendations.
                 </p>
               </Card>
 
