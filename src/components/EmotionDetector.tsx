@@ -869,8 +869,31 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
               {/* Detection indicator */}
               {isDetecting && (
-                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-                  Detecting...
+                <div className="absolute top-2 right-2 bg-gradient-to-r from-green-500 to-blue-500 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg animate-pulse">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                    <span>AI Detecting...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Models loading indicator */}
+              {isModelLoading && (
+                <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-spin"></div>
+                    <span>Loading AI...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Models ready indicator */}
+              {modelsLoaded && isWebcamActive && !isDetecting && (
+                <div className="absolute top-2 left-2 bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <span>AI Ready</span>
+                  </div>
                 </div>
               )}
             </div>
