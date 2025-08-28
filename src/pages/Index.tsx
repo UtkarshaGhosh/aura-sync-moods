@@ -336,6 +336,9 @@ const Index = () => {
             <EmotionDetector
               onEmotionDetected={handleEmotionDetected}
             />
+
+            {/* Temporary diagnostic component */}
+            <DatabaseDiagnostic />
           </div>
 
           {/* Center - Aura Visualizer */}
