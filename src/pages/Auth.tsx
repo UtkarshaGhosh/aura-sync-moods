@@ -269,6 +269,21 @@ const Auth: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="signup">
+                {/* Visual error/success feedback */}
+                {signupError && (
+                  <div className="p-3 mb-4 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-600 dark:text-red-400 font-medium">⚠️ Account Already Exists</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">{signupError}</p>
+                  </div>
+                )}
+
+                {signupSuccess && (
+                  <div className="p-3 mb-4 bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">✅ Success</p>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">{signupSuccess}</p>
+                  </div>
+                )}
+
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Display Name</Label>
