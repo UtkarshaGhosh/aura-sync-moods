@@ -127,13 +127,15 @@ const EmotionHistory: React.FC = () => {
         setMoodHistory(data || []);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Unexpected error loading mood history:', {
         error,
         errorType: typeof error,
         errorConstructor: error?.constructor?.name,
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: errorMessage,
         stack: error instanceof Error ? error.stack : undefined
       });
+      setError(`Unexpected error: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
