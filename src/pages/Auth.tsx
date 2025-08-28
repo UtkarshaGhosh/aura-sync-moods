@@ -30,7 +30,8 @@ const Auth: React.FC = () => {
         options: {
           data: {
             display_name: displayName,
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/auth/confirm`
         }
       });
 
