@@ -82,8 +82,11 @@ const Auth: React.FC = () => {
             errorMessage.includes('taken') ||
             error.status === 422) {
 
+          const errorMsg = 'An account with this email address already exists. Please sign in instead or use a different email address.';
+          setSignupError(errorMsg);
+
           toast.error('Account Already Exists!', {
-            description: 'An account with this email address already exists. Please sign in instead or use a different email address.',
+            description: errorMsg,
             duration: 5000,
           });
 
