@@ -251,7 +251,10 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
       setTracks(newTracks);
     } catch (error) {
-      console.error('Error generating playlist:', error);
+      console.error('🎵 [MusicRecs] Error generating playlist:', error);
+      if (error instanceof Error) {
+        console.error('- Message:', error.message);
+      }
       toast.error('Failed to generate recommendations');
       // Fallback to mock data
       const emotionTracks = mockRecommendations[emotion] || mockRecommendations.neutral;
