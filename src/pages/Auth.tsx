@@ -102,8 +102,11 @@ const Auth: React.FC = () => {
           });
         } else {
           // Fallback: Show the actual error message from Supabase
+          const errorMsg = `Error: ${error.message}`;
+          setSignupError(errorMsg);
+
           toast.error('Sign up failed', {
-            description: `Error: ${error.message}`,
+            description: errorMsg,
             duration: 6000,
           });
         }
