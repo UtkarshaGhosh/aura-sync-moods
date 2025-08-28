@@ -44,6 +44,7 @@ const EmotionHistory: React.FC = () => {
   const { user } = useAuth();
   const [moodHistory, setMoodHistory] = useState<MoodHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('week');
 
   useEffect(() => {
