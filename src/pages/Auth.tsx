@@ -117,8 +117,11 @@ const Auth: React.FC = () => {
         // Supabase sometimes returns success for existing emails for security reasons
         if (data.user && data.user.identities && data.user.identities.length === 0) {
           // This usually indicates the email is already registered
+          const errorMsg = 'An account with this email address already exists. Please sign in instead.';
+          setSignupError(errorMsg);
+
           toast.error('Account Already Exists!', {
-            description: 'An account with this email address already exists. Please sign in instead.',
+            description: errorMsg,
             duration: 5000,
           });
         } else if (data.user && !data.user.email_confirmed_at) {
