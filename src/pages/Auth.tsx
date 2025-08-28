@@ -46,10 +46,9 @@ const Auth: React.FC = () => {
         }
       } else {
         toast.success('Account created successfully!', {
-          description: 'You can now sign in to your account.',
+          description: 'Please check your email and click the confirmation link to activate your account.',
         });
-        // Auto-navigate to sign in tab or redirect
-        navigate('/');
+        // Don't auto-navigate - let user read the message
       }
     } catch (error) {
       toast.error('An unexpected error occurred', {
