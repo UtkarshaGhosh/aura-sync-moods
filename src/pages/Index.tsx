@@ -134,7 +134,7 @@ const Index = () => {
     loadSpotifyCredentials();
   }, [user]);
 
-  const handleEmotionDetected = async (emotion: string, source: 'webcam' | 'emoji') => {
+  const handleEmotionDetected = async (emotion: string, source: 'emoji' | 'upload') => {
     setCurrentEmotion(emotion);
     
     // Save to mood_history table
