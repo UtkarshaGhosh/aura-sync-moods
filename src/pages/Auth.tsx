@@ -62,24 +62,42 @@ const Auth: React.FC = () => {
       });
 
       if (error) {
-        // Handle specific error types
-        if (error.message.includes('already registered') ||
-            error.message.includes('User already registered') ||
-            error.message.includes('email address is already in use')) {
-          toast.error('Account already exists', {
+        // Debug: Log the exact error to console
+        console.error('Supabase signup error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.status || 'no status code');
+
+        // Handle specific error types with comprehensive patterns
+        const errorMessage = error.message.toLowerCase();
+
+        if (errorMessage.includes('already registered') ||
+            errorMessage.includes('user already registered') ||
+            errorMessage.includes('email address is already in use') ||
+            errorMessage.includes('already exists') ||
+            errorMessage.includes('duplicate') ||
+            errorMessage.includes('taken') ||
+            error.status === 422) {
+
+          toast.error('Account Already Exists!', {
             description: 'An account with this email address already exists. Please sign in instead or use a different email address.',
+            duration: 5000,
           });
-        } else if (error.message.includes('Password should be at least')) {
+
+        } else if (errorMessage.includes('password should be at least') ||
+                   errorMessage.includes('password') && errorMessage.includes('weak')) {
           toast.error('Password too weak', {
             description: 'Password should be at least 6 characters long.',
           });
-        } else if (error.message.includes('Invalid email')) {
+        } else if (errorMessage.includes('invalid email') ||
+                   errorMessage.includes('email') && errorMessage.includes('invalid')) {
           toast.error('Invalid email', {
             description: 'Please enter a valid email address.',
           });
         } else {
+          // Fallback: Show the actual error message from Supabase
           toast.error('Sign up failed', {
-            description: error.message,
+            description: `Error: ${error.message}`,
+            duration: 6000,
           });
         }
       } else if (data.user && !data.user.email_confirmed_at) {
