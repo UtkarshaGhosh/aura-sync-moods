@@ -5,7 +5,7 @@ import EmotionDetector from '@/components/EmotionDetector';
 import MusicRecommendations from '@/components/MusicRecommendations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Music, Settings, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
+import { Music, User, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { createPlaylist, addTracksToPlaylist } from '@/lib/spotify';
