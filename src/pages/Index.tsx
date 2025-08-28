@@ -63,33 +63,70 @@ const Index = () => {
   // Load Spotify credentials
   useEffect(() => {
     const loadSpotifyCredentials = async () => {
-      if (!user) return;
+      console.log('🔍 Loading Spotify credentials...');
+
+      if (!user) {
+        console.log('❌ No user found, skipping Spotify credentials load');
+        return;
+      }
+
+      console.log('✅ User found:', {
+        id: user.id,
+        email: user.email,
+        isAuthenticated: !!user
+      });
 
       try {
+        console.log('📡 Querying profiles table for user:', user.id);
+
         const { data, error } = await supabase
           .from('profiles')
           .select('access_token, spotify_user_id')
           .eq('id', user.id)
           .single();
 
+        console.log('📊 Query result:', { data, error });
+
         if (error) {
-          console.error('Error loading Spotify credentials:');
+          console.error('❌ Error loading Spotify credentials:');
           console.error('- Code:', error.code);
           console.error('- Message:', error.message);
           console.error('- Details:', error.details);
           console.error('- Hint:', error.hint);
           console.error('- Full error:', JSON.stringify(error, null, 2));
+
+          // Check if it's an RLS policy issue
+          if (error.code === 'PGRST116' || error.message?.includes('permission')) {
+            console.error('🔒 This appears to be a Row Level Security (RLS) policy issue');
+            console.error('💡 The user may not have permission to access their profile data');
+          }
+
           return;
         }
+
+        console.log('✅ Successfully loaded profile data:', {
+          hasAccessToken: !!data?.access_token,
+          hasSpotifyUserId: !!data?.spotify_user_id,
+          accessTokenLength: data?.access_token?.length || 0
+        });
 
         if (data?.access_token && data?.spotify_user_id) {
           setSpotifyCredentials({
             access_token: data.access_token,
             spotify_user_id: data.spotify_user_id,
           });
+          console.log('🎵 Spotify credentials set successfully');
+        } else {
+          console.log('⚠️ No Spotify credentials found in profile');
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('💥 Unexpected error loading Spotify credentials:', error);
+        console.error('Error type:', typeof error);
+        console.error('Error constructor:', error?.constructor?.name);
+        if (error instanceof Error) {
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
+        }
       }
     };
 
@@ -114,7 +151,10 @@ const Index = () => {
           console.error('Error saving mood history:', error);
         }
       } catch (error) {
-        console.error('Error saving mood history:', error);
+        console.error('💥 Error saving mood history:', error);
+        if (error instanceof Error) {
+          console.error('- Message:', error.message);
+        }
       }
     }
     
