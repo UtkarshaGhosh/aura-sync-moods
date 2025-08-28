@@ -8,21 +8,25 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  User, 
-  Music, 
-  ArrowLeft, 
-  Save, 
-  Trash2, 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  User,
+  Music,
+  ArrowLeft,
+  Save,
+  Trash2,
   ExternalLink,
   CheckCircle,
   XCircle,
-  Settings
+  Settings,
+  History,
+  TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getSpotifyAuthUrl } from '@/lib/spotify';
+import EmotionHistory from '@/components/EmotionHistory';
 
 interface UserProfile {
   id: string;
