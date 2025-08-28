@@ -153,6 +153,7 @@ const Index = () => {
           console.error('Error saving mood history:', error);
         } else if (moodEntry) {
           console.log('Mood history saved successfully:', moodEntry);
+          setCurrentMoodHistoryId(moodEntry.id);
           // Music suggestions will be saved separately when MusicRecommendations component generates them
         }
       } catch (error) {
