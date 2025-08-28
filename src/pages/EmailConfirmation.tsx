@@ -14,30 +14,47 @@ const EmailConfirmation: React.FC = () => {
   useEffect(() => {
     const handleEmailConfirmation = async () => {
       try {
-        // Get the token and type from URL parameters
-        const token = searchParams.get('token');
-        const type = searchParams.get('type');
-
-        if (!token || type !== 'email_confirmation') {
-          setStatus('error');
-          setMessage('Invalid confirmation link. Please try signing up again.');
-          return;
-        }
-
-        // Verify the email confirmation token
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash: token,
-          type: 'email'
-        });
+        // Check if user was redirected after email confirmation
+        const { data, error } = await supabase.auth.getSession();
 
         if (error) {
           setStatus('error');
           setMessage('Email confirmation failed. The link may have expired or already been used.');
           console.error('Email confirmation error:', error);
-        } else {
+          return;
+        }
+
+        // If there's a session, the email was confirmed successfully
+        if (data.session && data.session.user) {
           setStatus('success');
           setMessage('Email confirmed successfully! You can now log in to your account.');
-          console.log('Email confirmed for user:', data.user?.email);
+          console.log('Email confirmed for user:', data.session.user.email);
+        } else {
+          // Check URL parameters for confirmation tokens
+          const token = searchParams.get('token_hash') || searchParams.get('token');
+          const type = searchParams.get('type');
+
+          if (!token) {
+            setStatus('error');
+            setMessage('Invalid confirmation link. Please try signing up again.');
+            return;
+          }
+
+          // Try to verify the token
+          const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: type === 'recovery' ? 'recovery' : 'email'
+          });
+
+          if (verifyError) {
+            setStatus('error');
+            setMessage('Email confirmation failed. The link may have expired or already been used.');
+            console.error('Email verification error:', verifyError);
+          } else {
+            setStatus('success');
+            setMessage('Email confirmed successfully! You can now log in to your account.');
+            console.log('Email verified for user:', verifyData.user?.email);
+          }
         }
       } catch (error) {
         setStatus('error');
