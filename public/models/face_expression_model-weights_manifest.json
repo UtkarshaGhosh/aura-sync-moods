@@ -1,0 +1,9 @@
+[
+  {
+    "paths": ["face_expression_model-shard1"],
+    "weights": [
+      {"name": "dense0/kernel", "shape": [1024, 7], "dtype": "float32"},
+      {"name": "dense0/bias", "shape": [7], "dtype": "float32"}
+    ]
+  }
+]
