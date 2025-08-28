@@ -317,7 +317,7 @@ const Index = () => {
           </p>
           <div className="flex justify-center space-x-4">
             <Button onClick={() => scrollToSection('main-app')} size="lg">
-              Start Detecting
+              Choose Your Mood
               <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
             <Button variant="outline" onClick={() => scrollToSection('features')} size="lg">
