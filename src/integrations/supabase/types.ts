@@ -46,6 +46,53 @@ export type Database = {
           },
         ]
       }
+      music_suggestions: {
+        Row: {
+          album_name: string | null
+          artist_name: string
+          created_at: string
+          id: number
+          image_url: string | null
+          mood_history_id: number
+          preview_url: string | null
+          spotify_url: string | null
+          track_id: string
+          track_name: string
+        }
+        Insert: {
+          album_name?: string | null
+          artist_name: string
+          created_at?: string
+          id?: number
+          image_url?: string | null
+          mood_history_id: number
+          preview_url?: string | null
+          spotify_url?: string | null
+          track_id: string
+          track_name: string
+        }
+        Update: {
+          album_name?: string | null
+          artist_name?: string
+          created_at?: string
+          id?: number
+          image_url?: string | null
+          mood_history_id?: number
+          preview_url?: string | null
+          spotify_url?: string | null
+          track_id?: string
+          track_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_suggestions_mood_history_id_fkey"
+            columns: ["mood_history_id"]
+            isOneToOne: false
+            referencedRelation: "mood_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           access_token: string | null
