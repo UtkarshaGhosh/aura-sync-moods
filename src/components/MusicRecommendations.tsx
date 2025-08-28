@@ -252,6 +252,11 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       }
 
       setTracks(newTracks);
+
+      // Save music suggestions to database if moodHistoryId is provided
+      if (moodHistoryId && newTracks.length > 0) {
+        await saveMusicSuggestions(newTracks, moodHistoryId);
+      }
     } catch (error) {
       console.error('🎵 [MusicRecs] Error generating playlist:', error);
       if (error instanceof Error) {
