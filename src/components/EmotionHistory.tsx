@@ -66,6 +66,7 @@ const EmotionHistory: React.FC = () => {
     });
 
     setIsLoading(true);
+    setError(null);
     try {
       // Calculate date filter based on selected period
       let dateFilter = '';
