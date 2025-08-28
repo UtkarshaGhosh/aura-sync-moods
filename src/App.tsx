@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import SpotifyCallback from "./pages/SpotifyCallback";
+import EmailConfirmation from "./pages/EmailConfirmation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
