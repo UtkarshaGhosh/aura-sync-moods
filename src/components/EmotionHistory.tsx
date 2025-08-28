@@ -84,7 +84,13 @@ const EmotionHistory: React.FC = () => {
       const { data, error } = await query.limit(50);
 
       if (error) {
-        console.error('Error loading mood history:', error);
+        console.error('Error loading mood history:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          fullError: error
+        });
       } else {
         setMoodHistory(data || []);
       }
