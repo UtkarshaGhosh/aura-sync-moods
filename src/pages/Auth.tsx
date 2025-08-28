@@ -100,21 +100,36 @@ const Auth: React.FC = () => {
             duration: 6000,
           });
         }
-      } else if (data.user && !data.user.email_confirmed_at) {
-        // Account created successfully, waiting for email confirmation
-        toast.success('Account created successfully!', {
-          description: 'Please check your email and click the confirmation link to activate your account.',
-        });
-      } else if (data.user && data.user.email_confirmed_at) {
-        // Account was created and is already confirmed (shouldn't happen with email confirmation enabled)
-        toast.success('Account created and confirmed!', {
-          description: 'You can now sign in to your account.',
-        });
       } else {
-        // Fallback success message
-        toast.success('Account created successfully!', {
-          description: 'Please check your email and click the confirmation link to activate your account.',
-        });
+        // Debug: Log the signup response
+        console.log('Supabase signup response:', { data, error: null });
+        console.log('User object:', data.user);
+        console.log('Session object:', data.session);
+
+        // Check if this might be a duplicate email scenario
+        // Supabase sometimes returns success for existing emails for security reasons
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          // This usually indicates the email is already registered
+          toast.error('Account Already Exists!', {
+            description: 'An account with this email address already exists. Please sign in instead.',
+            duration: 5000,
+          });
+        } else if (data.user && !data.user.email_confirmed_at) {
+          // Account created successfully, waiting for email confirmation
+          toast.success('Account created successfully!', {
+            description: 'Please check your email and click the confirmation link to activate your account.',
+          });
+        } else if (data.user && data.user.email_confirmed_at) {
+          // Account was created and is already confirmed (shouldn't happen with email confirmation enabled)
+          toast.success('Account created and confirmed!', {
+            description: 'You can now sign in to your account.',
+          });
+        } else {
+          // Fallback success message
+          toast.success('Account created successfully!', {
+            description: 'Please check your email and click the confirmation link to activate your account.',
+          });
+        }
       }
     } catch (error) {
       console.error('Unexpected signup error:', error);
