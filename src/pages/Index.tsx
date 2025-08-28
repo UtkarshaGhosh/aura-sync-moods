@@ -219,8 +219,8 @@ const Index = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated background gradient */}
-      <div 
-        className="fixed inset-0 transition-all duration-[3000ms] ease-out"
+      <div
+        className="fixed inset-0 transition-all duration-[3s] ease-out"
         style={{
           background: `radial-gradient(circle at 50% 50%, 
             hsl(var(--emotion-${currentEmotion}) / 0.1) 0%,
