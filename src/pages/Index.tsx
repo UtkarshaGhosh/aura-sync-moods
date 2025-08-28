@@ -313,11 +313,11 @@ const Index = () => {
             Discover Your Emotional Journey
           </h2>
           <p className="text-lg text-muted-foreground mb-6">
-            Select your current mood or upload a photo to get personalized music recommendations and beautiful visual experiences.
+            Experience AI-powered emotion detection using your webcam, or manually select your mood to get personalized music and visual experiences.
           </p>
           <div className="flex justify-center space-x-4">
             <Button onClick={() => scrollToSection('main-app')} size="lg">
-              Choose Your Mood
+              Start AI Detection
               <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
             <Button variant="outline" onClick={() => scrollToSection('features')} size="lg">
@@ -384,9 +384,9 @@ const Index = () => {
                 <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
                   <BarChart3 className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Mood Selection & Photo Analysis</h3>
+                <h3 className="text-xl font-semibold mb-3">AI Emotion Detection</h3>
                 <p className="text-muted-foreground">
-                  Choose your current emotion from intuitive mood buttons or upload photos for analysis to get personalized recommendations.
+                  Advanced facial recognition technology analyzes your expressions in real-time, or choose from manual mood buttons for instant recommendations.
                 </p>
               </Card>
 
@@ -426,9 +426,9 @@ const Index = () => {
                   <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
                     <span className="text-2xl font-bold text-primary">1</span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3">Choose Your Mood</h3>
+                  <h3 className="text-xl font-semibold mb-3">Enable AI Detection</h3>
                   <p className="text-muted-foreground">
-                    Select your current emotion from the mood buttons or upload a photo for analysis. Your privacy is protected as all processing happens locally.
+                    Allow camera access to start real-time emotion detection. Our AI analyzes your facial expressions while keeping your privacy secure with local processing.
                   </p>
                 </div>
                 <div className="md:w-1/2">
@@ -445,9 +445,9 @@ const Index = () => {
                   <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
                     <span className="text-2xl font-bold text-primary">2</span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3">Mood Processing</h3>
+                  <h3 className="text-xl font-semibold mb-3">Emotion Analysis</h3>
                   <p className="text-muted-foreground">
-                    Your selected emotion or uploaded photo is processed to understand your current mood and generate appropriate music recommendations.
+                    Our AI processes your facial expressions and identifies emotions like happiness, sadness, surprise, and more with remarkable accuracy in real-time.
                   </p>
                 </div>
                 <div className="md:w-1/2">
@@ -466,7 +466,7 @@ const Index = () => {
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Personalized Experience</h3>
                   <p className="text-muted-foreground">
-                    Watch your aura transform and receive music recommendations that match your mood. Upload photos to explore different emotional states.
+                    Watch your aura transform in real-time and receive music recommendations that match your detected emotions. Capture photos of your emotional moments.
                   </p>
                 </div>
                 <div className="md:w-1/2">
@@ -485,7 +485,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="relative z-10 text-center py-6 text-sm text-muted-foreground">
         <p>
-          Powered by mood-based recommendations and Spotify integration •
+          Powered by AI emotion detection and Spotify integration •
           <span className="text-primary"> AuraSync</span>
         </p>
       </footer>
