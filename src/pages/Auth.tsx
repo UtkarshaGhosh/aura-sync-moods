@@ -20,25 +20,6 @@ const Auth: React.FC = () => {
   };
 
 
-  const checkEmailExists = async (email: string): Promise<boolean> => {
-    try {
-      // Try to initiate a password reset for the email
-      // If the email exists, Supabase will send a reset email (but we won't tell the user)
-      // If the email doesn't exist, we'll get a specific response
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/confirm`
-      });
-
-      // Supabase doesn't return an error for non-existent emails in resetPasswordForEmail
-      // So we'll use a different approach: try to sign up with a dummy password first
-      // and check the error type
-      return false; // We'll handle this in the main signup flow
-    } catch (error) {
-      console.error('Error checking email:', error);
-      return false;
-    }
-  };
-
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
