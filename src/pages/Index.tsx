@@ -485,7 +485,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="relative z-10 text-center py-6 text-sm text-muted-foreground">
         <p>
-          Powered by emotion detection and Spotify integration •
+          Powered by mood-based recommendations and Spotify integration •
           <span className="text-primary"> AuraSync</span>
         </p>
       </footer>
