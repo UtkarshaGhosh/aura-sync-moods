@@ -313,7 +313,7 @@ const Index = () => {
             Discover Your Emotional Journey
           </h2>
           <p className="text-lg text-muted-foreground mb-6">
-            Experience AI-powered emotion detection that transforms your feelings into personalized music and visual experiences.
+            Select your current mood or upload a photo to get personalized music recommendations and beautiful visual experiences.
           </p>
           <div className="flex justify-center space-x-4">
             <Button onClick={() => scrollToSection('main-app')} size="lg">
