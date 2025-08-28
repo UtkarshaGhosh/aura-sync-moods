@@ -12,6 +12,8 @@ import { useNavigate } from 'react-router-dom';
 const Auth: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [signupError, setSignupError] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState('');
   const navigate = useNavigate();
 
   const validateEmail = (email: string): boolean => {
