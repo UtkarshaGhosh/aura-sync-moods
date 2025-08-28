@@ -336,12 +336,14 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const startEmotionDetection = () => {
     if (!modelsLoaded || !videoRef.current || !canvasRef.current) {
       addDebugLog('❌ Cannot start detection: missing requirements');
+      addDebugLog(`Models loaded: ${modelsLoaded}, Video: ${!!videoRef.current}, Canvas: ${!!canvasRef.current}`);
       return;
     }
 
     addDebugLog('🧠 Emotion detection loop started');
     intervalRef.current = setInterval(async () => {
       if (!videoRef.current || !canvasRef.current || !modelsLoaded) {
+        addDebugLog('⚠️ Detection loop: missing requirements, skipping...');
         return;
       }
 
@@ -353,9 +355,12 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
         // Skip if video is not ready
         if (video.videoWidth === 0 || video.videoHeight === 0) {
+          addDebugLog('⏳ Video not ready for detection');
           setIsDetecting(false);
           return;
         }
+
+        addDebugLog(`🔍 Processing frame: ${video.videoWidth}x${video.videoHeight}`);
 
         // Set canvas dimensions to match video display
         const rect = video.getBoundingClientRect();
@@ -365,11 +370,15 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         // Calculate scale factors
         const scaleX = rect.width / video.videoWidth;
         const scaleY = rect.height / video.videoHeight;
+        addDebugLog(`📐 Scale factors: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)}`);
 
         // Detect faces and expressions
+        addDebugLog('🤖 Running face detection...');
         const detections = await faceapi
-          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }))
           .withFaceExpressions();
+
+        addDebugLog(`👤 Detected ${detections.length} faces`);
 
         // Clear canvas and draw detections
         const ctx = canvas.getContext('2d');
@@ -388,11 +397,16 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
             // Draw face detection box
             ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
             ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
 
-            // Get dominant emotion
+            // Get all expressions for debugging
             const expressions = detection.expressions;
+            addDebugLog(`😊 Expression scores: ${JSON.stringify(Object.fromEntries(
+              Object.entries(expressions).map(([key, val]) => [key, (val * 100).toFixed(1) + '%'])
+            ))}`);
+
+            // Get dominant emotion
             const maxExpression = Object.keys(expressions).reduce((a, b) =>
               expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
             );
@@ -411,25 +425,36 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             const confidence = expressions[maxExpression as keyof typeof expressions];
 
-            // Only update if confidence is high enough
-            if (confidence > 0.4) {
+            addDebugLog(`🎭 Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
+
+            // Lower threshold for better detection
+            if (confidence > 0.2) {
               setDetectedEmotion(mappedEmotion);
               onEmotionDetected(mappedEmotion, 'webcam');
+              addDebugLog(`✅ Emotion updated to: ${mappedEmotion}`);
+            } else {
+              addDebugLog(`⚠️ Confidence too low: ${(confidence * 100).toFixed(1)}%`);
             }
 
-            // Draw emotion label
+            // Draw emotion label with background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(scaledX, scaledY - 35, scaledWidth, 25);
+
             ctx.fillStyle = '#00ff00';
-            ctx.font = `${Math.max(12, scaledWidth * 0.08)}px Arial`;
-            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX, scaledY - 10);
+            ctx.font = `bold ${Math.max(14, scaledWidth * 0.08)}px Arial`;
+            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX + 5, scaledY - 15);
+          } else {
+            addDebugLog('👤 No faces detected in frame');
           }
         }
 
         setIsDetecting(false);
       } catch (err) {
         addDebugLog(`❌ Detection error: ${err}`);
+        console.error('Emotion detection error:', err);
         setIsDetecting(false);
       }
-    }, 1500);
+    }, 2000); // Slightly slower interval for better performance
   };
 
   // Handle file upload for image emotion detection
