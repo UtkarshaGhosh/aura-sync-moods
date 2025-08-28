@@ -218,12 +218,34 @@ const EmotionHistory: React.FC = () => {
             </Button>
           </div>
           <div className="text-xs text-muted-foreground space-y-2">
-            <p><strong>Possible solutions:</strong></p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Make sure you've run the database migration for music_suggestions table</li>
-              <li>Check your internet connection</li>
-              <li>Try refreshing the page</li>
-            </ul>
+            <p><strong>If this is your first time:</strong></p>
+            <div className="text-left bg-muted/20 p-3 rounded text-xs">
+              <p className="font-medium mb-2">Run this SQL in your Supabase dashboard:</p>
+              <pre className="text-xs whitespace-pre-wrap">
+{`CREATE TABLE public.music_suggestions (
+  id BIGSERIAL PRIMARY KEY,
+  mood_history_id BIGINT REFERENCES public.mood_history(id) ON DELETE CASCADE,
+  track_id TEXT NOT NULL,
+  track_name TEXT NOT NULL,
+  artist_name TEXT NOT NULL,
+  album_name TEXT,
+  image_url TEXT,
+  preview_url TEXT,
+  spotify_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.music_suggestions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own music suggestions"
+ON public.music_suggestions FOR SELECT
+USING (mood_history_id IN (SELECT id FROM public.mood_history WHERE user_id = auth.uid()));
+
+CREATE POLICY "Users can insert their own music suggestions"
+ON public.music_suggestions FOR INSERT
+WITH CHECK (mood_history_id IN (SELECT id FROM public.mood_history WHERE user_id = auth.uid()));`}
+              </pre>
+            </div>
           </div>
         </div>
       </Card>
