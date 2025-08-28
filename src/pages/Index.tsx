@@ -426,9 +426,9 @@ const Index = () => {
                   <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
                     <span className="text-2xl font-bold text-primary">1</span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3">Enable Your Camera</h3>
+                  <h3 className="text-xl font-semibold mb-3">Choose Your Mood</h3>
                   <p className="text-muted-foreground">
-                    Allow camera access to start emotion detection. Our AI analyzes your facial expressions in real-time while keeping your privacy secure.
+                    Select your current emotion from the mood buttons or upload a photo for analysis. Your privacy is protected as all processing happens locally.
                   </p>
                 </div>
                 <div className="md:w-1/2">
