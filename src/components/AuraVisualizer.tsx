@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AuraVisualizerProps {
@@ -8,14 +8,14 @@ interface AuraVisualizerProps {
 }
 
 const emotionColors = {
-  happy: 'hsl(45 100% 65%)',
-  sad: 'hsl(220 60% 50%)',
-  angry: 'hsl(0 80% 60%)',
-  surprised: 'hsl(280 100% 70%)',
-  fearful: 'hsl(260 40% 40%)',
-  disgusted: 'hsl(120 30% 40%)',
-  neutral: 'hsl(210 15% 60%)',
-  calm: 'hsl(180 50% 60%)',
+  happy: 'hsl(60 100% 70%)',     // Bright vibrant yellow
+  sad: 'hsl(220 100% 60%)',      // Deep vibrant blue
+  angry: 'hsl(0 100% 65%)',      // Intense vibrant red
+  surprised: 'hsl(280 100% 75%)', // Electric vibrant purple
+  fearful: 'hsl(260 80% 55%)',   // Dark vibrant purple
+  disgusted: 'hsl(120 80% 50%)', // Vibrant green
+  neutral: 'hsl(210 50% 70%)',   // Soft blue-gray
+  calm: 'hsl(180 100% 65%)',     // Bright vibrant cyan
 };
 
 const AuraVisualizer: React.FC<AuraVisualizerProps> = ({
@@ -24,85 +24,192 @@ const AuraVisualizer: React.FC<AuraVisualizerProps> = ({
   className
 }) => {
   const [currentEmotion, setCurrentEmotion] = useState(emotion);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isVibrating, setIsVibrating] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCurrentEmotion(emotion);
+
+    // Trigger vibration effect when emotion changes
+    setIsVibrating(true);
+    const timer = setTimeout(() => setIsVibrating(false), 1000);
+    return () => clearTimeout(timer);
   }, [emotion]);
+
+  // Mouse movement tracking
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        // Calculate offset from center (reduced sensitivity)
+        const offsetX = (e.clientX - centerX) * 0.05;
+        const offsetY = (e.clientY - centerY) * 0.05;
+
+        setMousePosition({ x: offsetX, y: offsetY });
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const emotionColor = emotionColors[emotion as keyof typeof emotionColors] || emotionColors.neutral;
 
   return (
-    <div className={cn("relative flex items-center justify-center", className)}>
-      {/* Outer glow rings */}
-      <div 
-        className="absolute inset-0 rounded-full opacity-30 aura-pulse"
+    <div
+      ref={containerRef}
+      className={cn("relative flex items-center justify-center", className)}
+      style={{
+        transform: `translate(${mousePosition.x}px, ${mousePosition.y}px)`,
+        transition: 'transform 0.1s ease-out',
+      }}
+    >
+      {/* Outer glow rings with enhanced vibrance */}
+      <div
+        className={`absolute inset-0 rounded-full opacity-40 aura-pulse ${isVibrating ? 'vibrate-intense' : ''}`}
         style={{
-          background: `radial-gradient(circle, ${emotionColor}20 0%, transparent 70%)`,
-          transform: `scale(${1.5 + intensity * 0.5})`,
+          background: `radial-gradient(circle, ${emotionColor}40 0%, ${emotionColor}10 40%, transparent 70%)`,
+          transform: `scale(${1.8 + intensity * 0.7})`,
+          filter: 'blur(8px)',
         }}
       />
-      <div 
-        className="absolute inset-0 rounded-full opacity-20 aura-pulse"
+      <div
+        className={`absolute inset-0 rounded-full opacity-30 aura-pulse ${isVibrating ? 'vibrate-intense' : ''}`}
         style={{
-          background: `radial-gradient(circle, ${emotionColor}15 0%, transparent 80%)`,
-          transform: `scale(${2 + intensity * 0.7})`,
+          background: `radial-gradient(circle, ${emotionColor}30 0%, ${emotionColor}08 50%, transparent 80%)`,
+          transform: `scale(${2.5 + intensity * 1})`,
           animationDelay: '1s',
+          filter: 'blur(12px)',
         }}
       />
-      
-      {/* Main aura orb */}
-      <div 
-        className="relative w-48 h-48 rounded-full aura-breathe emotion-transition glass"
+
+      {/* Vibrant energy waves */}
+      <div
+        className={`absolute inset-0 rounded-full opacity-20 energy-wave ${isVibrating ? 'vibrate-subtle' : ''}`}
         style={{
-          background: `radial-gradient(circle at 30% 30%, ${emotionColor}60, ${emotionColor}20)`,
+          background: `conic-gradient(${emotionColor}60, transparent, ${emotionColor}60, transparent, ${emotionColor}60)`,
+          transform: `scale(${3 + intensity * 1.2}) rotate(0deg)`,
+          animation: 'spin 8s linear infinite',
+        }}
+      />
+
+      {/* Main aura orb with enhanced vibrancy */}
+      <div
+        className={`relative w-48 h-48 rounded-full aura-breathe emotion-transition glass ${isVibrating ? 'vibrate-main' : ''}`}
+        style={{
+          background: `radial-gradient(circle at 25% 25%, ${emotionColor}90, ${emotionColor}60 40%, ${emotionColor}30 80%)`,
           boxShadow: `
-            0 0 60px ${emotionColor}40,
-            inset 0 0 60px ${emotionColor}20,
-            0 0 120px ${emotionColor}20
+            0 0 80px ${emotionColor}60,
+            inset 0 0 80px ${emotionColor}30,
+            0 0 160px ${emotionColor}40,
+            0 0 240px ${emotionColor}20
           `,
+          border: `2px solid ${emotionColor}40`,
         }}
       >
-        {/* Inner sparkles */}
-        <div className="absolute inset-4 rounded-full opacity-60">
-          <div 
-            className="absolute top-6 left-8 w-2 h-2 rounded-full animate-pulse"
-            style={{ background: emotionColor, animationDelay: '0.5s' }}
-          />
-          <div 
-            className="absolute top-12 right-6 w-1 h-1 rounded-full animate-pulse"
-            style={{ background: emotionColor, animationDelay: '1.5s' }}
-          />
-          <div 
-            className="absolute bottom-8 left-12 w-1.5 h-1.5 rounded-full animate-pulse"
-            style={{ background: emotionColor, animationDelay: '2s' }}
-          />
+        {/* Enhanced inner sparkles with more vibrant colors */}
+        <div className="absolute inset-2 rounded-full opacity-80">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className={`absolute rounded-full animate-pulse sparkle-float ${isVibrating ? 'vibrate-sparkle' : ''}`}
+              style={{
+                background: `linear-gradient(45deg, ${emotionColor}, white)`,
+                width: `${8 + (i % 3) * 4}px`,
+                height: `${8 + (i % 3) * 4}px`,
+                top: `${15 + (i * 11)}%`,
+                left: `${20 + (i * 8)}%`,
+                animationDelay: `${i * 0.3}s`,
+                boxShadow: `0 0 10px ${emotionColor}80`,
+              }}
+            />
+          ))}
         </div>
 
-        {/* Center highlight */}
-        <div 
-          className="absolute top-8 left-8 w-16 h-16 rounded-full opacity-40"
+        {/* Enhanced center highlight with vibrant glow */}
+        <div
+          className={`absolute top-6 left-6 w-20 h-20 rounded-full opacity-50 ${isVibrating ? 'vibrate-subtle' : ''}`}
           style={{
-            background: `radial-gradient(circle, ${emotionColor}80 0%, transparent 70%)`,
+            background: `radial-gradient(circle, white 0%, ${emotionColor}80 30%, transparent 70%)`,
+            filter: 'blur(2px)',
+          }}
+        />
+
+        {/* Pulsing core */}
+        <div
+          className={`absolute top-1/2 left-1/2 w-12 h-12 rounded-full transform -translate-x-1/2 -translate-y-1/2 ${isVibrating ? 'vibrate-core' : ''}`}
+          style={{
+            background: `radial-gradient(circle, white, ${emotionColor}90)`,
+            boxShadow: `0 0 30px ${emotionColor}90, inset 0 0 20px ${emotionColor}60`,
+            animation: 'pulse 2s ease-in-out infinite',
           }}
         />
       </div>
 
-      {/* Floating particles */}
-      {Array.from({ length: 6 }).map((_, i) => (
+      {/* Enhanced floating particles with vibrant trails */}
+      {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
-          className="absolute w-1 h-1 rounded-full opacity-60 float"
+          className={`absolute rounded-full opacity-70 particle-float ${isVibrating ? 'vibrate-particle' : ''}`}
           style={{
-            background: emotionColor,
-            top: `${20 + i * 10}%`,
-            left: `${15 + i * 12}%`,
-            animationDelay: `${i * 0.8}s`,
-            animationDuration: `${4 + i * 0.5}s`,
+            background: `linear-gradient(45deg, ${emotionColor}, white)`,
+            width: `${3 + (i % 4)}px`,
+            height: `${3 + (i % 4)}px`,
+            top: `${10 + (i * 7)}%`,
+            left: `${5 + (i * 8)}%`,
+            animationDelay: `${i * 0.6}s`,
+            animationDuration: `${3 + (i % 3)}s`,
+            boxShadow: `0 0 8px ${emotionColor}70`,
           }}
         />
       ))}
+
+      {/* Emotion-specific special effects */}
+      {emotion === 'happy' && (
+        <div className="absolute inset-0 rounded-full animate-spin" style={{ animation: 'spin 4s linear infinite' }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 rounded-full"
+              style={{
+                background: 'gold',
+                top: '10%',
+                left: '50%',
+                transformOrigin: '0 140px',
+                transform: `rotate(${i * 60}deg)`,
+                boxShadow: '0 0 15px gold',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {emotion === 'angry' && (
+        <div className={`absolute inset-0 ${isVibrating ? 'lightning-effect' : ''}`}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-16 bg-red-500 opacity-60 animate-pulse"
+              style={{
+                top: `${20 + i * 15}%`,
+                left: `${30 + i * 10}%`,
+                transform: `rotate(${i * 45}deg)`,
+                animationDelay: `${i * 0.2}s`,
+                boxShadow: '0 0 10px red',
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
 export default AuraVisualizer;
+
+// Add these CSS animations to your global stylesheet
+// Or you can add them via a style tag in your component

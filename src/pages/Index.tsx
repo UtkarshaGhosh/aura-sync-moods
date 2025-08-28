@@ -6,7 +6,6 @@ import MusicRecommendations from '@/components/MusicRecommendations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Music, Settings, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
-import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { createPlaylist, addTracksToPlaylist } from '@/lib/spotify';
@@ -158,24 +157,16 @@ const Index = () => {
       }
     }
     
-    toast.success(`${emotion.charAt(0).toUpperCase() + emotion.slice(1)} mood detected!`, {
-      description: `🎵 Your aura is updating and personalized ${emotion} music is being generated...`,
-      duration: 4000,
-    });
   };
 
   const handleSavePlaylist = async (tracks: Track[]) => {
     if (!spotifyCredentials) {
-      toast.error('Spotify not connected', {
-        description: 'Please connect your Spotify account in settings.',
-      });
+      console.log('Spotify not connected - please connect your Spotify account in settings.');
       return;
     }
 
     if (tracks.length === 0) {
-      toast.error('No tracks to save', {
-        description: 'Generate some music recommendations first.',
-      });
+      console.log('No tracks to save - generate some music recommendations first.');
       return;
     }
 
@@ -183,9 +174,7 @@ const Index = () => {
       const playlistName = `AuraSync - ${currentEmotion.charAt(0).toUpperCase() + currentEmotion.slice(1)} Vibes`;
       const playlistDescription = `AI-generated playlist for your ${currentEmotion} mood. Created by AuraSync on ${new Date().toLocaleDateString()}`;
 
-      toast.info('Creating playlist...', {
-        description: 'Saving to your Spotify library.',
-      });
+      console.log('Creating playlist and saving to your Spotify library...');
 
       // Create playlist
       const playlist = await createPlaylist(
@@ -201,9 +190,7 @@ const Index = () => {
         .map(track => `spotify:track:${track.id}`);
 
       if (trackUris.length === 0) {
-        toast.warning('No Spotify tracks to save', {
-          description: 'These recommendations don\'t have Spotify links. Try connecting Spotify for personalized tracks.',
-        });
+        console.log('No Spotify tracks to save - these recommendations don\'t have Spotify links.');
         return;
       }
 
@@ -214,26 +201,18 @@ const Index = () => {
         spotifyCredentials.access_token
       );
 
-      toast.success('Playlist saved to Spotify!', {
-        description: `"${playlistName}" with ${trackUris.length} tracks added to your library.`,
-        action: {
-          label: 'Open in Spotify',
-          onClick: () => window.open(playlist.external_urls.spotify, '_blank'),
-        },
-      });
+      console.log(`Playlist saved to Spotify! "${playlistName}" with ${trackUris.length} tracks added to your library.`);
+      // Optionally open Spotify in new tab
+      // window.open(playlist.external_urls.spotify, '_blank');
 
     } catch (error) {
       console.error('Error saving playlist:', error);
 
       if (error instanceof Error && error.message === 'SPOTIFY_TOKEN_EXPIRED') {
-        toast.error('Spotify session expired', {
-          description: 'Please reconnect your Spotify account in settings.',
-        });
+        console.error('Spotify session expired - please reconnect your Spotify account in settings.');
         setSpotifyCredentials(null);
       } else {
-        toast.error('Failed to save playlist', {
-          description: error instanceof Error ? error.message : 'Please try again.',
-        });
+        console.error('Failed to save playlist:', error instanceof Error ? error.message : 'Please try again.');
       }
     }
   };
@@ -241,9 +220,9 @@ const Index = () => {
   const handleLogout = async () => {
     try {
       await signOut();
-      toast.success('Logged out successfully');
+      console.log('Logged out successfully');
     } catch (error) {
-      toast.error('Error logging out');
+      console.error('Error logging out:', error);
     }
   };
 

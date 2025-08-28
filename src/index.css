@@ -195,6 +195,49 @@
   .bounce-in {
     animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+
+  /* Vibration effects */
+  .vibrate-intense {
+    animation: vibrate-intense 0.3s ease-in-out 3;
+  }
+
+  .vibrate-main {
+    animation: vibrate-main 0.2s ease-in-out 5;
+  }
+
+  .vibrate-subtle {
+    animation: vibrate-subtle 0.15s ease-in-out 4;
+  }
+
+  .vibrate-sparkle {
+    animation: vibrate-sparkle 0.1s ease-in-out 6;
+  }
+
+  .vibrate-particle {
+    animation: vibrate-particle 0.2s ease-in-out 3;
+  }
+
+  .vibrate-core {
+    animation: vibrate-core 0.25s ease-in-out 4;
+  }
+
+  /* Enhanced floating animations */
+  .sparkle-float {
+    animation: sparkle-float 4s ease-in-out infinite;
+  }
+
+  .particle-float {
+    animation: particle-float 6s ease-in-out infinite;
+  }
+
+  .energy-wave {
+    animation: energy-wave 8s linear infinite;
+  }
+
+  /* Emotion-specific effects */
+  .lightning-effect {
+    animation: lightning-flash 0.5s ease-in-out 3;
+  }
 }
 
 @layer utilities {
@@ -320,4 +363,105 @@
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Vibration keyframes */
+@keyframes vibrate-intense {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-6px) translateY(-2px); }
+  20% { transform: translateX(6px) translateY(2px); }
+  30% { transform: translateX(-4px) translateY(-1px); }
+  40% { transform: translateX(4px) translateY(1px); }
+  50% { transform: translateX(-3px) translateY(-1px); }
+  60% { transform: translateX(3px) translateY(1px); }
+  70% { transform: translateX(-2px) translateY(-1px); }
+  80% { transform: translateX(2px) translateY(1px); }
+  90% { transform: translateX(-1px) translateY(0); }
+}
+
+@keyframes vibrate-main {
+  0%, 100% { transform: translateX(0) scale(1); }
+  25% { transform: translateX(-3px) scale(1.02); }
+  50% { transform: translateX(3px) scale(0.98); }
+  75% { transform: translateX(-2px) scale(1.01); }
+}
+
+@keyframes vibrate-subtle {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  33% { transform: translateX(-2px) translateY(-1px); }
+  66% { transform: translateX(2px) translateY(1px); }
+}
+
+@keyframes vibrate-sparkle {
+  0%, 100% { transform: translateX(0) translateY(0) scale(1); }
+  50% { transform: translateX(-1px) translateY(-1px) scale(1.2); }
+}
+
+@keyframes vibrate-particle {
+  0%, 100% { transform: translateX(0) translateY(0) rotate(0deg); }
+  33% { transform: translateX(-2px) translateY(1px) rotate(2deg); }
+  66% { transform: translateX(2px) translateY(-1px) rotate(-2deg); }
+}
+
+@keyframes vibrate-core {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  25% { transform: translate(-50%, -50%) scale(1.1) rotate(1deg); }
+  50% { transform: translate(-50%, -50%) scale(0.9) rotate(-1deg); }
+  75% { transform: translate(-50%, -50%) scale(1.05) rotate(0.5deg); }
+}
+
+/* Enhanced floating animations */
+@keyframes sparkle-float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translateY(-8px) translateX(-4px) rotate(90deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-12px) translateX(0px) rotate(180deg);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateY(-8px) translateX(4px) rotate(270deg);
+    opacity: 1;
+  }
+}
+
+@keyframes particle-float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+    opacity: 0.7;
+  }
+  33% {
+    transform: translateY(-15px) translateX(-8px) scale(1.2);
+    opacity: 1;
+  }
+  66% {
+    transform: translateY(-20px) translateX(8px) scale(0.8);
+    opacity: 0.5;
+  }
+}
+
+@keyframes energy-wave {
+  0% {
+    transform: scale(3) rotate(0deg);
+    opacity: 0.1;
+  }
+  50% {
+    transform: scale(3.5) rotate(180deg);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(3) rotate(360deg);
+    opacity: 0.1;
+  }
+}
+
+/* Emotion-specific effects */
+@keyframes lightning-flash {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
 }
