@@ -276,8 +276,8 @@ const Index = () => {
             </nav>
 
             <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
+              <User className="w-4 h-4 mr-2" />
+              Profile
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
