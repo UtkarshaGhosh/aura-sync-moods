@@ -361,18 +361,18 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
           {/* Emotion-based generation status */}
           {emotion && (
             <div className="text-center p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
-              <p className="text-sm text-muted-foreground mb-1">
+              <div className="text-sm text-muted-foreground mb-1">
                 {isGenerating ? (
-                  <span className="flex items-center justify-center space-x-2">
+                  <div className="flex items-center justify-center space-x-2">
                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     <span>Analyzing your <span className="capitalize font-medium text-primary">{emotion}</span> mood...</span>
-                  </span>
+                  </div>
                 ) : (
                   <span>
                     Curated for your <span className="capitalize font-medium text-primary">{emotion}</span> mood
                   </span>
                 )}
-              </p>
+              </div>
               {isGenerating && (
                 <p className="text-xs text-muted-foreground/70">
                   Finding tracks that match your emotional state
