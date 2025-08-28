@@ -86,34 +86,21 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     addDebugLog('📦 Starting model loading...');
     setIsModelLoading(true);
     try {
-      const MODEL_URL = '/models'; // Try local models first
-
-      // Try to load models, fallback to CDN if local fails
-      try {
-        addDebugLog('🔄 Attempting to load models from local path...');
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-        ]);
-        addDebugLog('✅ Models loaded from local path');
-      } catch (localError) {
-        addDebugLog(`❌ Local model loading failed: ${localError}`);
-        addDebugLog('🌐 Falling back to CDN...');
-        // Fallback to CDN
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
-          faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
-        ]);
-        addDebugLog('✅ Models loaded from CDN');
-      }
+      // Always use CDN for reliability
+      addDebugLog('🌐 Loading models from CDN...');
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+        faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+      ]);
+      addDebugLog('✅ Models loaded from CDN successfully');
 
       setModelsLoaded(true);
       setError(null);
-      addDebugLog('🎉 All models loaded successfully!');
+      addDebugLog('🎉 All models loaded and ready for detection!');
     } catch (err) {
       addDebugLog(`❌ Model loading completely failed: ${err}`);
       console.error('Error loading face-api models:', err);
-      setError('Failed to load emotion detection models');
+      setError('Failed to load emotion detection models. Please check your internet connection.');
     } finally {
       setIsModelLoading(false);
     }
