@@ -53,7 +53,16 @@ const EmotionHistory: React.FC = () => {
   }, [user, selectedPeriod]);
 
   const loadMoodHistory = async () => {
-    if (!user) return;
+    if (!user) {
+      console.warn('No user found, skipping mood history load');
+      return;
+    }
+
+    console.log('Loading mood history for user:', {
+      userId: user.id,
+      email: user.email,
+      selectedPeriod
+    });
 
     setIsLoading(true);
     try {
