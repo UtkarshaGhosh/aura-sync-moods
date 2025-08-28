@@ -141,7 +141,8 @@ const mockRecommendations: Record<string, Track[]> = {
 const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   emotion,
   onSavePlaylist,
-  className
+  className,
+  moodHistoryId
 }) => {
   const { user } = useAuth();
   const [tracks, setTracks] = useState<Track[]>([]);
