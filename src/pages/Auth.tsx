@@ -29,6 +29,25 @@ const Auth: React.FC = () => {
     const password = formData.get('password') as string;
     const displayName = formData.get('displayName') as string;
 
+    // Clear any previous email errors
+    setEmailError('');
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      toast.error('Password too short', {
+        description: 'Password must be at least 6 characters long.',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // First, try to sign up and handle the response appropriately
       const { data, error } = await supabase.auth.signUp({
