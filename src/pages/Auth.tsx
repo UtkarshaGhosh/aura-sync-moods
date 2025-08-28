@@ -244,11 +244,22 @@ const Auth: React.FC = () => {
                         name="email"
                         type="email"
                         placeholder="your@email.com"
-                        className="pl-10"
+                        className={`pl-10 ${emailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                         required
                         disabled={isLoading}
+                        onChange={(e) => {
+                          const email = e.target.value;
+                          if (email && !validateEmail(email)) {
+                            setEmailError('Please enter a valid email address');
+                          } else {
+                            setEmailError('');
+                          }
+                        }}
                       />
                     </div>
+                    {emailError && (
+                      <p className="text-sm text-red-500">{emailError}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
