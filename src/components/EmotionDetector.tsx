@@ -24,6 +24,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   onEmotionDetected,
   className
 }) => {
+  // Webcam state
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [detectedEmotion, setDetectedEmotion] = useState<string | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -31,7 +32,9 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
-  const [debugMode, setDebugMode] = useState(true); // Enable debug mode
+  
+  // UI state
+  const [debugMode, setDebugMode] = useState(true);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
@@ -39,6 +42,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [emotionChanged, setEmotionChanged] = useState(false);
   const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
 
+  // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -82,34 +86,21 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     addDebugLog('📦 Starting model loading...');
     setIsModelLoading(true);
     try {
-      const MODEL_URL = '/models'; // We'll need to copy models to public folder
-
-      // Try to load models, fallback to CDN if local fails
-      try {
-        addDebugLog('🔄 Attempting to load models from local path...');
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-        ]);
-        addDebugLog('✅ Models loaded from local path');
-      } catch (localError) {
-        addDebugLog(`❌ Local model loading failed: ${localError}`);
-        addDebugLog('🌐 Falling back to CDN...');
-        // Fallback to CDN
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
-          faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
-        ]);
-        addDebugLog('✅ Models loaded from CDN');
-      }
+      // Always use CDN for reliability
+      addDebugLog('🌐 Loading models from CDN...');
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+        faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+      ]);
+      addDebugLog('✅ Models loaded from CDN successfully');
 
       setModelsLoaded(true);
       setError(null);
-      addDebugLog('🎉 All models loaded successfully!');
+      addDebugLog('🎉 All models loaded and ready for detection!');
     } catch (err) {
       addDebugLog(`❌ Model loading completely failed: ${err}`);
       console.error('Error loading face-api models:', err);
-      setError('Failed to load emotion detection models');
+      setError('Failed to load emotion detection models. Please check your internet connection.');
     } finally {
       setIsModelLoading(false);
     }
@@ -168,25 +159,15 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       while (!videoRef.current && retries < maxRetries) {
         addDebugLog(`⏳ Video element not ready, retry ${retries + 1}/${maxRetries}`);
-        // Force a re-render to ensure DOM is updated
-        setIsLoading(prev => prev);
         await new Promise(resolve => setTimeout(resolve, 200));
         retries++;
       }
 
       if (!videoRef.current) {
-        addDebugLog('❌ Video element still not available, forcing component update...');
-        // Try one more time after forcing a state update
-        setError('Initializing video element...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setError(null);
-
-        if (!videoRef.current) {
-          throw new Error('Video element reference is null after waiting and retrying');
-        }
+        addDebugLog('❌ Video element still not available');
+        throw new Error('Video element reference is null after waiting');
       }
 
-      // Also check canvas ref
       if (!canvasRef.current) {
         addDebugLog('❌ Canvas element not available');
         throw new Error('Canvas element reference is null');
@@ -211,9 +192,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       addDebugLog(`✅ Camera stream obtained: ${stream.getVideoTracks().length} video tracks`);
 
       const video = videoRef.current;
-      addDebugLog(`🎥 Video element found: ${video.tagName}`);
-
-      // Set stream
       video.srcObject = stream;
       streamRef.current = stream;
       addDebugLog('🔗 Stream assigned to video element');
@@ -224,33 +202,23 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         const timeout = setTimeout(() => {
           addDebugLog('❌ Timeout waiting for video metadata');
           reject(new Error('Timeout waiting for video metadata'));
-        }, 10000); // 10 second timeout
+        }, 10000);
 
-        // Set up event listeners
         const onLoadedMetadata = async () => {
           clearTimeout(timeout);
-          addDebugLog(`📊 Video metadata loaded: ${video.videoWidth}x${video.videoHeight}, readyState: ${video.readyState}`);
+          addDebugLog(`📊 Video metadata loaded: ${video.videoWidth}x${video.videoHeight}`);
 
           try {
-            // Ensure video is ready to play
             if (video.readyState >= 2) {
               addDebugLog('▶️ Attempting to play video...');
               await video.play();
               addDebugLog('✅ Video playing successfully');
-
-              video.removeEventListener('loadedmetadata', onLoadedMetadata);
-              video.removeEventListener('error', onError);
-              video.removeEventListener('canplay', onCanPlay);
+              cleanup();
               resolve();
-            } else {
-              addDebugLog(`⏳ Video not ready (readyState: ${video.readyState}), waiting...`);
-              // Wait for canplay event
             }
           } catch (err) {
             addDebugLog(`❌ Error playing video: ${err}`);
-            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-            video.removeEventListener('error', onError);
-            video.removeEventListener('canplay', onCanPlay);
+            cleanup();
             reject(err);
           }
         };
@@ -260,40 +228,34 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           try {
             await video.play();
             addDebugLog('✅ Video playing after canplay');
-            clearTimeout(timeout);
-            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-            video.removeEventListener('error', onError);
-            video.removeEventListener('canplay', onCanPlay);
+            cleanup();
             resolve();
           } catch (err) {
             addDebugLog(`❌ Error playing video on canplay: ${err}`);
-            clearTimeout(timeout);
-            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-            video.removeEventListener('error', onError);
-            video.removeEventListener('canplay', onCanPlay);
+            cleanup();
             reject(err);
           }
         };
 
-        const onError = (err: Event) => {
-          clearTimeout(timeout);
-          addDebugLog(`❌ Video error event: ${err.type}`);
-          video.removeEventListener('loadedmetadata', onLoadedMetadata);
-          video.removeEventListener('error', onError);
-          video.removeEventListener('canplay', onCanPlay);
+        const onError = () => {
+          addDebugLog('❌ Video error event');
+          cleanup();
           reject(new Error('Video failed to load'));
         };
 
-        video.addEventListener('loadedmetadata', onLoadedMetadata);
-        video.addEventListener('error', onError);
-        video.addEventListener('canplay', onCanPlay);
+        const cleanup = () => {
+          video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          video.removeEventListener('canplay', onCanPlay);
+          video.removeEventListener('error', onError);
+        };
 
-        // Check if already loaded
+        video.addEventListener('loadedmetadata', onLoadedMetadata);
+        video.addEventListener('canplay', onCanPlay);
+        video.addEventListener('error', onError);
+
         if (video.readyState >= 2) {
-          addDebugLog('📊 Video already has metadata loaded');
           onLoadedMetadata();
         } else if (video.readyState >= 3) {
-          addDebugLog('🎬 Video already can play');
           onCanPlay();
         }
       });
@@ -302,7 +264,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       setIsLoading(false);
       addDebugLog('🎉 Webcam started successfully!');
 
-      // Start emotion detection loop after a short delay
+      // Start emotion detection loop
       setTimeout(() => {
         addDebugLog('🧠 Starting emotion detection...');
         startEmotionDetection();
@@ -327,8 +289,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           errorMessage = 'Video playback failed. Try refreshing the page.';
         } else if (error.message.includes('getUserMedia not supported')) {
           errorMessage = 'Camera not supported in this browser. Try using Chrome, Firefox, or Safari.';
-        } else if (error.message.includes('Timeout')) {
-          errorMessage = 'Camera initialization timed out. Check your camera connection and try again.';
         }
       }
 
@@ -376,13 +336,14 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const startEmotionDetection = () => {
     if (!modelsLoaded || !videoRef.current || !canvasRef.current) {
       addDebugLog('❌ Cannot start detection: missing requirements');
+      addDebugLog(`Models loaded: ${modelsLoaded}, Video: ${!!videoRef.current}, Canvas: ${!!canvasRef.current}`);
       return;
     }
 
     addDebugLog('🧠 Emotion detection loop started');
     intervalRef.current = setInterval(async () => {
       if (!videoRef.current || !canvasRef.current || !modelsLoaded) {
-        addDebugLog('❌ Detection stopped: missing refs or models');
+        addDebugLog('⚠️ Detection loop: missing requirements, skipping...');
         return;
       }
 
@@ -401,19 +362,20 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
         addDebugLog(`🔍 Processing frame: ${video.videoWidth}x${video.videoHeight}`);
 
-        // Set canvas dimensions to match the display size
+        // Set canvas dimensions to match video display
         const rect = video.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
 
-        // Calculate scale factors for drawing detections
+        // Calculate scale factors
         const scaleX = rect.width / video.videoWidth;
         const scaleY = rect.height / video.videoHeight;
         addDebugLog(`📐 Scale factors: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)}`);
 
         // Detect faces and expressions
+        addDebugLog('🤖 Running face detection...');
         const detections = await faceapi
-          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }))
           .withFaceExpressions();
 
         addDebugLog(`👤 Detected ${detections.length} faces`);
@@ -424,22 +386,27 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           if (detections.length > 0) {
-            // Draw face detection box
             const detection = detections[0];
             const { x, y, width, height } = detection.detection.box;
 
-            // Scale coordinates to match display size
+            // Scale coordinates
             const scaledX = x * scaleX;
             const scaledY = y * scaleY;
             const scaledWidth = width * scaleX;
             const scaledHeight = height * scaleY;
 
+            // Draw face detection box
             ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
             ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
 
-            // Get dominant emotion
+            // Get all expressions for debugging
             const expressions = detection.expressions;
+            addDebugLog(`😊 Expression scores: ${JSON.stringify(Object.fromEntries(
+              Object.entries(expressions).map(([key, val]) => [key, (val * 100).toFixed(1) + '%'])
+            ))}`);
+
+            // Get dominant emotion
             const maxExpression = Object.keys(expressions).reduce((a, b) =>
               expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
             );
@@ -458,19 +425,24 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             const confidence = expressions[maxExpression as keyof typeof expressions];
 
-            addDebugLog(`😊 Detected emotion: ${maxExpression} (${(confidence * 100).toFixed(0)}%)`);
+            addDebugLog(`��� Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
 
-            // Only update if confidence is high enough
-            if (confidence > 0.4) {
+            // Lower threshold for better detection
+            if (confidence > 0.2) {
               setDetectedEmotion(mappedEmotion);
               onEmotionDetected(mappedEmotion, 'webcam');
               addDebugLog(`✅ Emotion updated to: ${mappedEmotion}`);
+            } else {
+              addDebugLog(`⚠️ Confidence too low: ${(confidence * 100).toFixed(1)}%`);
             }
 
-            // Draw emotion label
+            // Draw emotion label with background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(scaledX, scaledY - 35, scaledWidth, 25);
+
             ctx.fillStyle = '#00ff00';
-            ctx.font = `${Math.max(12, scaledWidth * 0.08)}px Arial`;
-            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX, scaledY - 10);
+            ctx.font = `bold ${Math.max(14, scaledWidth * 0.08)}px Arial`;
+            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX + 5, scaledY - 15);
           } else {
             addDebugLog('👤 No faces detected in frame');
           }
@@ -479,10 +451,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         setIsDetecting(false);
       } catch (err) {
         addDebugLog(`❌ Detection error: ${err}`);
-        console.error('Error in emotion detection:', err);
+        console.error('Emotion detection error:', err);
         setIsDetecting(false);
       }
-    }, 1500); // Check every 1.5 seconds
+    }, 2000); // Slightly slower interval for better performance
   };
 
   // Handle file upload for image emotion detection
@@ -498,7 +470,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       setIsDetecting(true);
       setError(null);
 
-      // Create image element
       const img = new Image();
       const canvas = canvasRef.current;
 
@@ -510,7 +481,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       img.onload = async () => {
         try {
-          // Calculate display dimensions while maintaining aspect ratio
           const containerRect = canvas.parentElement?.getBoundingClientRect();
           if (!containerRect) return;
 
@@ -532,7 +502,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           const ctx = canvas.getContext('2d');
           if (!ctx) return;
 
-          // Clear and draw the image
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
 
@@ -576,6 +545,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             setDetectedEmotion(mappedEmotion);
             onEmotionDetected(mappedEmotion, 'upload');
+            
+            // Add to captured images
+            const imageData = canvas.toDataURL('image/png');
+            setCapturedImages(prev => [imageData, ...prev]);
           } else {
             setError('No face detected in the uploaded image');
           }
@@ -600,7 +573,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       setIsDetecting(false);
     }
 
-    // Clear the file input
     if (event.target) {
       event.target.value = '';
     }
@@ -611,10 +583,115 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     onEmotionDetected(emotion, 'emoji');
   };
 
+  // Manual emotion detection trigger
+  const detectEmotionNow = async () => {
+    if (!videoRef.current || !canvasRef.current || !modelsLoaded || !isWebcamActive) {
+      addDebugLog('❌ Cannot detect: requirements not met');
+      return;
+    }
+
+    addDebugLog('🎯 Manual emotion detection triggered');
+    setIsDetecting(true);
+
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        addDebugLog('⏳ Video not ready for manual detection');
+        setIsDetecting(false);
+        return;
+      }
+
+      // Set canvas dimensions
+      const rect = video.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
+      const scaleX = rect.width / video.videoWidth;
+      const scaleY = rect.height / video.videoHeight;
+
+      // Detect faces and expressions
+      addDebugLog('🤖 Running manual face detection...');
+      const detections = await faceapi
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }))
+        .withFaceExpressions();
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (detections.length > 0) {
+          const detection = detections[0];
+          const { x, y, width, height } = detection.detection.box;
+
+          const scaledX = x * scaleX;
+          const scaledY = y * scaleY;
+          const scaledWidth = width * scaleX;
+          const scaledHeight = height * scaleY;
+
+          // Draw detection box with pulsing effect
+          ctx.strokeStyle = '#00ff00';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
+          const expressions = detection.expressions;
+          const maxExpression = Object.keys(expressions).reduce((a, b) =>
+            expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
+          );
+
+          const emotionMap: { [key: string]: string } = {
+            'happy': 'happy',
+            'sad': 'sad',
+            'angry': 'angry',
+            'surprised': 'surprised',
+            'neutral': 'neutral',
+            'disgusted': 'angry',
+            'fearful': 'surprised'
+          };
+
+          const mappedEmotion = emotionMap[maxExpression] || 'neutral';
+          const confidence = expressions[maxExpression as keyof typeof expressions];
+
+          addDebugLog(`🎭 Manual detection result: ${maxExpression} (${(confidence * 100).toFixed(1)}%)`);
+
+          if (confidence > 0.15) {
+            setDetectedEmotion(mappedEmotion);
+            onEmotionDetected(mappedEmotion, 'webcam');
+            addDebugLog(`✅ Manual detection successful: ${mappedEmotion}`);
+          }
+
+          // Draw label with enhanced styling
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.fillRect(scaledX, scaledY - 40, scaledWidth, 30);
+
+          ctx.fillStyle = '#000';
+          ctx.font = `bold ${Math.max(16, scaledWidth * 0.1)}px Arial`;
+          ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, scaledX + 5, scaledY - 20);
+        } else {
+          addDebugLog('👤 No faces detected in manual detection');
+          // Draw "no face" indicator
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.fillStyle = '#ff0000';
+          ctx.font = 'bold 24px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('No Face Detected', canvas.width / 2, canvas.height / 2);
+          ctx.textAlign = 'left';
+        }
+      }
+
+      setIsDetecting(false);
+    } catch (error) {
+      addDebugLog(`❌ Manual detection error: ${error}`);
+      setIsDetecting(false);
+    }
+  };
+
   // Capture picture from webcam
   const captureImage = () => {
     if (!videoRef.current || !canvasRef.current || !isWebcamActive) {
-      addDebugLog('❌ Cannot capture: webcam not active or refs missing');
       return;
     }
 
@@ -623,63 +700,40 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
     try {
       const video = videoRef.current;
-      const canvas = canvasRef.current;
-
-      // Create a temporary canvas for capture
       const captureCanvas = document.createElement('canvas');
       const captureCtx = captureCanvas.getContext('2d');
 
       if (!captureCtx) {
-        addDebugLog('❌ Cannot get capture canvas context');
         setIsCapturing(false);
         return;
       }
 
-      // Set canvas size to match video dimensions
       captureCanvas.width = video.videoWidth;
       captureCanvas.height = video.videoHeight;
-
-      // Draw the current video frame
       captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
 
-      // Convert to base64 image
       const imageData = captureCanvas.toDataURL('image/png');
-
-      // Add to captured images array
       setCapturedImages(prev => [imageData, ...prev]);
 
-      addDebugLog('✅ Image captured successfully');
-      addDebugLog(`🖼️ Total captured images: ${capturedImages.length + 1}`);
-
-      // Show success feedback
       setIsCapturing(false);
+      addDebugLog('✅ Image captured successfully');
 
       // Flash effect
       const flashOverlay = document.createElement('div');
       flashOverlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: white;
-        opacity: 0.8;
-        pointer-events: none;
-        z-index: 9999;
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: white; opacity: 0.8; pointer-events: none; z-index: 9999;
         transition: opacity 0.1s ease-out;
       `;
       document.body.appendChild(flashOverlay);
 
       setTimeout(() => {
         flashOverlay.style.opacity = '0';
-        setTimeout(() => {
-          document.body.removeChild(flashOverlay);
-        }, 100);
+        setTimeout(() => document.body.removeChild(flashOverlay), 100);
       }, 50);
 
     } catch (error) {
       addDebugLog(`❌ Capture failed: ${error}`);
-      console.error('Error capturing image:', error);
       setIsCapturing(false);
     }
   };
@@ -692,53 +746,39 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    addDebugLog(`💾 Downloaded image ${index + 1}`);
   };
 
   // Delete captured image
   const deleteImage = (index: number) => {
     setCapturedImages(prev => prev.filter((_, i) => i !== index));
-    addDebugLog(`🗑️ Deleted image ${index + 1}`);
   };
 
   // Clear all captured images
   const clearAllImages = () => {
     setCapturedImages([]);
-    addDebugLog('🗑️ Cleared all captured images');
   };
 
   // Handle emotion changes with animations
   useEffect(() => {
     if (detectedEmotion && detectedEmotion !== previousEmotion) {
-      addDebugLog(`🎭 Emotion changed: ${previousEmotion} → ${detectedEmotion}`);
       setEmotionChanged(true);
       setPreviousEmotion(detectedEmotion);
 
-      // Reset animation state after animation completes
       const timer = setTimeout(() => {
         setEmotionChanged(false);
       }, 800);
 
       return () => clearTimeout(timer);
     }
-  }, [detectedEmotion, previousEmotion, addDebugLog]);
+  }, [detectedEmotion, previousEmotion]);
 
   // Component initialization
   useEffect(() => {
     addDebugLog('🚀 EmotionDetector component mounted');
 
-    // Log environment information
     const envInfo = getEnvironmentInfo();
-    addDebugLog(`🌍 Environment - Browser: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
+    addDebugLog(`🌍 Environment - Browser: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}`);
     addDebugLog(`🔒 Secure context: ${envInfo.isSecure}`);
-    addDebugLog(`📱 MediaDevices available: ${!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)}`);
-
-    addDebugLog(`Initial refs - Video: ${videoRef.current ? 'Available' : 'NULL'}, Canvas: ${canvasRef.current ? 'Available' : 'NULL'}`);
-
-    // Small delay to ensure refs are set
-    setTimeout(() => {
-      addDebugLog(`After delay refs - Video: ${videoRef.current ? 'Available' : 'NULL'}, Canvas: ${canvasRef.current ? 'Available' : 'NULL'}`);
-    }, 100);
 
     return () => {
       addDebugLog('🔥 EmotionDetector component unmounting');
@@ -746,20 +786,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     };
   }, [addDebugLog]);
 
-  // Monitor ref changes
-  useEffect(() => {
-    if (videoRef.current) {
-      addDebugLog('✅ Video ref now available');
-    }
-    if (canvasRef.current) {
-      addDebugLog('✅ Canvas ref now available');
-    }
-  }, [videoRef.current, canvasRef.current, addDebugLog]);
-
   return (
     <Card className={cn("glass border-border/50", className)}>
       <div className="p-6 space-y-6">
-        {/* Webcam Section */}
+        {/* AI Webcam Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-glow">AI Emotion Detection</h3>
 
@@ -781,7 +811,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           <div className="relative">
             {/* Video Display */}
             <div className="relative rounded-lg overflow-hidden bg-muted/50" style={{ aspectRatio: '4/3' }}>
-              {/* Video element - always rendered but conditionally visible */}
+              {/* Video element */}
               <video
                 ref={videoRef}
                 autoPlay
@@ -790,59 +820,32 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                 className={`w-full h-full object-cover ${isWebcamActive ? 'block' : 'hidden'}`}
                 onError={(e) => {
                   addDebugLog(`❌ Video error event: ${e.type}`);
-                  console.error('Video error:', e);
                   setError('Video playback failed');
-                }}
-                onLoadedMetadata={() => {
-                  addDebugLog('📊 Video onLoadedMetadata event fired');
-                  console.log('Video metadata loaded');
-                }}
-                onCanPlay={() => {
-                  addDebugLog('🎬 Video onCanPlay event fired');
-                }}
-                onPlay={() => {
-                  addDebugLog('▶️ Video onPlay event fired');
-                }}
-                onPause={() => {
-                  addDebugLog('⏸️ Video onPause event fired');
                 }}
               />
 
-              {/* Canvas overlay for face detection - always rendered */}
+              {/* Canvas overlay for face detection */}
               <canvas
                 ref={canvasRef}
                 className={`absolute top-0 left-0 w-full h-full pointer-events-none opacity-80 ${isWebcamActive ? 'block' : 'hidden'}`}
               />
 
               {/* Placeholder content when webcam is off */}
-          {!isWebcamActive && (
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-              <div className="text-center text-muted-foreground max-w-md">
-                {isLoading ? (
-                  <>
-                    <div className="w-12 h-12 mx-auto mb-2 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                    <p className="text-sm font-medium">Starting camera...</p>
-                    <p className="text-xs mt-2 text-muted-foreground/70">Preparing AI emotion detection</p>
-                  </>
-                ) : error ? (
-                  <div className="space-y-3">
-                    <AlertTriangle className="w-12 h-12 mx-auto text-red-400" />
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-red-400">Camera Access Issue</p>
-                      <p className="text-xs text-red-300">{error}</p>
-
-                          {error.includes('permission denied') || error.includes('blocked') ? (
-                            <div className="text-left bg-red-500/10 rounded p-3 space-y-2">
-                              <p className="text-xs font-medium text-red-400">To fix this:</p>
-                              <ol className="text-xs text-red-300 space-y-1 list-decimal list-inside">
-                                <li>Look for a camera icon in your browser's address bar</li>
-                                <li>Click it and select "Allow" or "Always allow"</li>
-                                <li>Refresh the page and try again</li>
-                                <li>If no icon appears, check your browser settings</li>
-                              </ol>
-                            </div>
-                          ) : null}
-
+              {!isWebcamActive && (
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="text-center text-muted-foreground max-w-md">
+                    {isLoading ? (
+                      <>
+                        <div className="w-12 h-12 mx-auto mb-2 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                        <p className="text-sm font-medium">Starting camera...</p>
+                        <p className="text-xs mt-2 text-muted-foreground/70">Preparing AI emotion detection</p>
+                      </>
+                    ) : error ? (
+                      <div className="space-y-3">
+                        <AlertTriangle className="w-12 h-12 mx-auto text-red-400" />
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-red-400">Camera Access Issue</p>
+                          <p className="text-xs text-red-300">{error}</p>
                           <Button
                             onClick={startWebcam}
                             variant="outline"
@@ -854,20 +857,43 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                         </div>
                       </div>
                     ) : (
-                  <>
-                    <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="font-medium mb-2">AI Emotion Detection Ready</p>
-                    <p className="text-xs text-muted-foreground/70">Start camera to detect emotions and get personalized music</p>
-                  </>
-                )}
+                      <>
+                        <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="font-medium mb-2">AI Emotion Detection Ready</p>
+                        <p className="text-xs text-muted-foreground/70">Start camera to detect emotions and get personalized music</p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Detection indicator */}
               {isDetecting && (
-                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-                  Detecting...
+                <div className="absolute top-2 right-2 bg-gradient-to-r from-green-500 to-blue-500 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg animate-pulse">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                    <span>AI Detecting...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Models loading indicator */}
+              {isModelLoading && (
+                <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-spin"></div>
+                    <span>Loading AI...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Models ready indicator */}
+              {modelsLoaded && isWebcamActive && !isDetecting && (
+                <div className="absolute top-2 left-2 bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <span>AI Ready</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -898,18 +924,56 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               </Button>
             </div>
 
-            {/* Capture Button - Only show when webcam is active */}
+            {/* Detection Controls - Only show when webcam is active */}
             {isWebcamActive && (
-              <Button
-                onClick={captureImage}
-                variant="secondary"
-                size="sm"
-                className="w-full"
-                disabled={isCapturing || !isWebcamActive}
-              >
-                <Camera className="w-4 h-4 mr-2" />
-                {isCapturing ? 'Capturing...' : 'Take Picture'}
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={detectEmotionNow}
+                  variant="default"
+                  size="sm"
+                  disabled={isDetecting || !modelsLoaded || !isWebcamActive}
+                  className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  {isDetecting ? 'Detecting...' : 'Detect Emotion'}
+                </Button>
+
+                <Button
+                  onClick={captureImage}
+                  variant="secondary"
+                  size="sm"
+                  disabled={isCapturing || !isWebcamActive}
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  {isCapturing ? 'Capturing...' : 'Take Picture'}
+                </Button>
+              </div>
+            )}
+
+            {/* Detection Status Indicator */}
+            {isWebcamActive && (
+              <div className="text-center p-2 bg-muted/20 rounded-lg">
+                <div className="flex items-center justify-center space-x-2 text-xs">
+                  {modelsLoaded ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span className="text-green-400">AI Models Ready</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                      <span className="text-yellow-400">Loading AI Models...</span>
+                    </>
+                  )}
+                </div>
+
+                {isDetecting && (
+                  <div className="flex items-center justify-center space-x-2 text-xs mt-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                    <span className="text-blue-400">Analyzing facial expressions...</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           
@@ -940,31 +1004,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                     <li>Click it and change from "Block" to "Allow"</li>
                     <li>Refresh the page and try again</li>
                   </ol>
-                </div>
-
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">Browser-specific steps:</p>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-medium">Chrome:</span> Settings → Privacy & Security → Site Settings → Camera
-                    </div>
-                    <div>
-                      <span className="font-medium">Firefox:</span> Settings → Privacy & Security → Permissions → Camera
-                    </div>
-                    <div>
-                      <span className="font-medium">Safari:</span> Safari → Preferences → Websites → Camera
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">Other issues:</p>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground/80">
-                    <li>Close other apps that might be using your camera</li>
-                    <li>Try refreshing the page</li>
-                    <li>Restart your browser</li>
-                    <li>Check if your camera is properly connected</li>
-                  </ul>
                 </div>
               </div>
             </CollapsibleContent>
@@ -1112,22 +1151,50 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-muted-foreground">Debug Console</h4>
-              <Button
-                onClick={() => setDebugLogs([])}
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-xs"
-              >
-                Clear
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  onClick={() => setDebugLogs([])}
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={() => {
+                    addDebugLog('🔍 Manual system check');
+                    addDebugLog(`Models loaded: ${modelsLoaded}`);
+                    addDebugLog(`Webcam active: ${isWebcamActive}`);
+                    addDebugLog(`Video ref: ${!!videoRef.current}`);
+                    addDebugLog(`Canvas ref: ${!!canvasRef.current}`);
+                    if (videoRef.current) {
+                      const video = videoRef.current;
+                      addDebugLog(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+                      addDebugLog(`Video ready state: ${video.readyState}`);
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                >
+                  Test
+                </Button>
+              </div>
             </div>
             <div className="bg-black/80 rounded-lg p-3 max-h-40 overflow-y-auto">
               {debugLogs.length === 0 ? (
-                <p className="text-gray-400 text-xs">No debug logs yet...</p>
+                <p className="text-gray-400 text-xs">No debug logs yet... Click "Test" to run diagnostics</p>
               ) : (
                 <div className="space-y-1">
                   {debugLogs.map((log, index) => (
-                    <p key={index} className="text-xs font-mono text-green-400 leading-tight">
+                    <p key={index} className={`text-xs font-mono leading-tight ${
+                      log.includes('❌') ? 'text-red-400' :
+                      log.includes('✅') ? 'text-green-400' :
+                      log.includes('⚠️') ? 'text-yellow-400' :
+                      log.includes('🎭') ? 'text-purple-400' :
+                      log.includes('👤') ? 'text-blue-400' :
+                      'text-green-300'
+                    }`}>
                       {log}
                     </p>
                   ))}
@@ -1143,62 +1210,47 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
               >
                 Hide Debug
               </Button>
-              <Button
-                onClick={() => {
-                  addDebugLog('🔍 Manual test log');
-                  addDebugLog(`Video ref: ${videoRef.current ? 'Available' : 'NULL'}`);
-                  addDebugLog(`Canvas ref: ${canvasRef.current ? 'Available' : 'NULL'}`);
-                  addDebugLog(`Stream ref: ${streamRef.current ? 'Available' : 'NULL'}`);
-                  if (videoRef.current) {
-                    const video = videoRef.current;
-                    addDebugLog(`Video state: readyState=${video.readyState}, paused=${video.paused}, ended=${video.ended}`);
-                    addDebugLog(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
-                    addDebugLog(`Video src: ${video.src || 'No src'}`);
-                    addDebugLog(`Video srcObject: ${video.srcObject ? 'Set' : 'NULL'}`);
-                  }
-                }}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                Test Debug
-              </Button>
-              <Button
-                onClick={() => {
-                  addDebugLog('🔄 Manual component refresh triggered');
-                  setIsWebcamActive(false);
-                  setIsLoading(false);
-                  setError(null);
-                  setDetectedEmotion(null);
-                  if (streamRef.current) {
-                    streamRef.current.getTracks().forEach(track => track.stop());
-                    streamRef.current = null;
-                  }
-                  if (videoRef.current) {
-                    videoRef.current.srcObject = null;
-                  }
-                  addDebugLog('✅ Component state reset');
-                }}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                Reset
-              </Button>
             </div>
           </div>
         )}
 
-        {/* Debug toggle for non-debug mode */}
+        {/* System Status Summary */}
         {!debugMode && (
-          <Button
-            onClick={() => setDebugMode(true)}
-            variant="outline"
-            size="sm"
-            className="w-full text-xs"
-          >
-            Show Debug Console
-          </Button>
+          <div className="space-y-2">
+            <div className="text-center p-3 bg-muted/20 rounded-lg">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">System Status</h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className={`flex items-center justify-center space-x-1 ${modelsLoaded ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${modelsLoaded ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                  <span>AI Models</span>
+                </div>
+                <div className={`flex items-center justify-center space-x-1 ${isWebcamActive ? 'text-green-400' : 'text-gray-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${isWebcamActive ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                  <span>Camera</span>
+                </div>
+                <div className={`flex items-center justify-center space-x-1 ${detectedEmotion ? 'text-green-400' : 'text-gray-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${detectedEmotion ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                  <span>Detection</span>
+                </div>
+                <div className={`flex items-center justify-center space-x-1 ${error ? 'text-red-400' : 'text-green-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${error ? 'bg-red-400' : 'bg-green-400'}`}></div>
+                  <span>Status</span>
+                </div>
+              </div>
+              {error && (
+                <p className="text-xs text-red-400 mt-2">{error}</p>
+              )}
+            </div>
+
+            <Button
+              onClick={() => setDebugMode(true)}
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+            >
+              Show Debug Console
+            </Button>
+          </div>
         )}
       </div>
     </Card>

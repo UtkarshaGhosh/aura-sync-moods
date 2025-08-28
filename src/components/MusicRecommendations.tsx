@@ -163,7 +163,12 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
           .single();
 
         if (error) {
-          console.error('Error loading Spotify credentials:', error);
+          console.error('Error loading Spotify credentials:');
+          console.error('- Code:', error.code);
+          console.error('- Message:', error.message);
+          console.error('- Details:', error.details);
+          console.error('- Hint:', error.hint);
+          console.error('- Full error:', JSON.stringify(error, null, 2));
           return;
         }
 
@@ -226,7 +231,10 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             description: `Generated ${newTracks.length} personalized tracks for your ${emotion} mood from Spotify.`,
           });
         } catch (error) {
-          console.error('Spotify API error:', error);
+          console.error('🎵 [MusicRecs] Spotify API error:', error);
+          if (error instanceof Error) {
+            console.error('- Message:', error.message);
+          }
           newTracks = await generatePlaylistFromMock();
           toast.info(`Sample ${emotion} recommendations`, {
             description: 'Connect Spotify for personalized music matching your emotions.',
@@ -243,7 +251,10 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
       setTracks(newTracks);
     } catch (error) {
-      console.error('Error generating playlist:', error);
+      console.error('🎵 [MusicRecs] Error generating playlist:', error);
+      if (error instanceof Error) {
+        console.error('- Message:', error.message);
+      }
       toast.error('Failed to generate recommendations');
       // Fallback to mock data
       const emotionTracks = mockRecommendations[emotion] || mockRecommendations.neutral;

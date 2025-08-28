@@ -63,35 +63,77 @@ const Index = () => {
   // Load Spotify credentials
   useEffect(() => {
     const loadSpotifyCredentials = async () => {
-      if (!user) return;
+      console.log('🔍 Loading Spotify credentials...');
+
+      if (!user) {
+        console.log('❌ No user found, skipping Spotify credentials load');
+        return;
+      }
+
+      console.log('✅ User found:', {
+        id: user.id,
+        email: user.email,
+        isAuthenticated: !!user
+      });
 
       try {
+        console.log('📡 Querying profiles table for user:', user.id);
+
         const { data, error } = await supabase
           .from('profiles')
           .select('access_token, spotify_user_id')
           .eq('id', user.id)
           .single();
 
+        console.log('📊 Query result:', { data, error });
+
         if (error) {
-          console.error('Error loading Spotify credentials:', error);
+          console.error('❌ Error loading Spotify credentials:');
+          console.error('- Code:', error.code);
+          console.error('- Message:', error.message);
+          console.error('- Details:', error.details);
+          console.error('- Hint:', error.hint);
+          console.error('- Full error:', JSON.stringify(error, null, 2));
+
+          // Check if it's an RLS policy issue
+          if (error.code === 'PGRST116' || error.message?.includes('permission')) {
+            console.error('🔒 This appears to be a Row Level Security (RLS) policy issue');
+            console.error('💡 The user may not have permission to access their profile data');
+          }
+
           return;
         }
+
+        console.log('✅ Successfully loaded profile data:', {
+          hasAccessToken: !!data?.access_token,
+          hasSpotifyUserId: !!data?.spotify_user_id,
+          accessTokenLength: data?.access_token?.length || 0
+        });
 
         if (data?.access_token && data?.spotify_user_id) {
           setSpotifyCredentials({
             access_token: data.access_token,
             spotify_user_id: data.spotify_user_id,
           });
+          console.log('🎵 Spotify credentials set successfully');
+        } else {
+          console.log('⚠️ No Spotify credentials found in profile');
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('💥 Unexpected error loading Spotify credentials:', error);
+        console.error('Error type:', typeof error);
+        console.error('Error constructor:', error?.constructor?.name);
+        if (error instanceof Error) {
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
+        }
       }
     };
 
     loadSpotifyCredentials();
   }, [user]);
 
-  const handleEmotionDetected = async (emotion: string, source: 'webcam' | 'emoji') => {
+  const handleEmotionDetected = async (emotion: string, source: 'webcam' | 'emoji' | 'upload') => {
     setCurrentEmotion(emotion);
     
     // Save to mood_history table
@@ -109,7 +151,10 @@ const Index = () => {
           console.error('Error saving mood history:', error);
         }
       } catch (error) {
-        console.error('Error saving mood history:', error);
+        console.error('💥 Error saving mood history:', error);
+        if (error instanceof Error) {
+          console.error('- Message:', error.message);
+        }
       }
     }
     
@@ -219,7 +264,7 @@ const Index = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated background gradient */}
-      <div 
+      <div
         className="fixed inset-0 transition-all duration-[3000ms] ease-out"
         style={{
           background: `radial-gradient(circle at 50% 50%, 
@@ -268,11 +313,11 @@ const Index = () => {
             Discover Your Emotional Journey
           </h2>
           <p className="text-lg text-muted-foreground mb-6">
-            Experience AI-powered emotion detection that transforms your feelings into personalized music and visual experiences.
+            Experience AI-powered emotion detection using your webcam, or manually select your mood to get personalized music and visual experiences.
           </p>
           <div className="flex justify-center space-x-4">
             <Button onClick={() => scrollToSection('main-app')} size="lg">
-              Start Detecting
+              Start AI Detection
               <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
             <Button variant="outline" onClick={() => scrollToSection('features')} size="lg">
@@ -341,7 +386,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-xl font-semibold mb-3">AI Emotion Detection</h3>
                 <p className="text-muted-foreground">
-                  Advanced facial recognition technology analyzes your expressions in real-time to detect emotions with high accuracy.
+                  Advanced facial recognition technology analyzes your expressions in real-time, or choose from manual mood buttons for instant recommendations.
                 </p>
               </Card>
 
@@ -381,9 +426,9 @@ const Index = () => {
                   <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
                     <span className="text-2xl font-bold text-primary">1</span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3">Enable Your Camera</h3>
+                  <h3 className="text-xl font-semibold mb-3">Enable AI Detection</h3>
                   <p className="text-muted-foreground">
-                    Allow camera access to start emotion detection. Our AI analyzes your facial expressions in real-time while keeping your privacy secure.
+                    Allow camera access to start real-time emotion detection. Our AI analyzes your facial expressions while keeping your privacy secure with local processing.
                   </p>
                 </div>
                 <div className="md:w-1/2">
@@ -402,7 +447,7 @@ const Index = () => {
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Emotion Analysis</h3>
                   <p className="text-muted-foreground">
-                    Our AI processes your expressions and identifies emotions like happiness, sadness, surprise, and more with remarkable accuracy.
+                    Our AI processes your facial expressions and identifies emotions like happiness, sadness, surprise, and more with remarkable accuracy in real-time.
                   </p>
                 </div>
                 <div className="md:w-1/2">
@@ -421,7 +466,7 @@ const Index = () => {
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Personalized Experience</h3>
                   <p className="text-muted-foreground">
-                    Watch your aura transform and receive music recommendations that match your mood. Take photos to capture your emotional moments.
+                    Watch your aura transform in real-time and receive music recommendations that match your detected emotions. Capture photos of your emotional moments.
                   </p>
                 </div>
                 <div className="md:w-1/2">
@@ -440,7 +485,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="relative z-10 text-center py-6 text-sm text-muted-foreground">
         <p>
-          Powered by emotion detection and Spotify integration •
+          Powered by AI emotion detection and Spotify integration •
           <span className="text-primary"> AuraSync</span>
         </p>
       </footer>
