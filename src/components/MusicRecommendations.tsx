@@ -231,7 +231,10 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             description: `Generated ${newTracks.length} personalized tracks for your ${emotion} mood from Spotify.`,
           });
         } catch (error) {
-          console.error('Spotify API error:', error);
+          console.error('🎵 [MusicRecs] Spotify API error:', error);
+          if (error instanceof Error) {
+            console.error('- Message:', error.message);
+          }
           newTracks = await generatePlaylistFromMock();
           toast.info(`Sample ${emotion} recommendations`, {
             description: 'Connect Spotify for personalized music matching your emotions.',
