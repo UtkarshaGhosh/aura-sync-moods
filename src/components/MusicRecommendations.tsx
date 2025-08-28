@@ -284,6 +284,36 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     }
   };
 
+  // Save music suggestions to database
+  const saveMusicSuggestions = async (tracks: Track[], moodHistoryId: number) => {
+    if (!user || !moodHistoryId) return;
+
+    try {
+      const musicSuggestions = tracks.map(track => ({
+        mood_history_id: moodHistoryId,
+        track_id: track.id,
+        track_name: track.name,
+        artist_name: track.artist,
+        album_name: track.album,
+        image_url: track.image !== '/placeholder.svg' ? track.image : null,
+        preview_url: track.preview_url,
+        spotify_url: track.spotify_url || null,
+      }));
+
+      const { error } = await supabase
+        .from('music_suggestions')
+        .insert(musicSuggestions);
+
+      if (error) {
+        console.error('Error saving music suggestions:', error);
+      } else {
+        console.log('Music suggestions saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving music suggestions:', error);
+    }
+  };
+
   const handlePlayPause = (trackId: string) => {
     if (currentTrack === trackId && isPlaying) {
       setIsPlaying(false);
