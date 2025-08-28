@@ -11,7 +11,13 @@ import { useNavigate } from 'react-router-dom';
 
 const Auth: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const navigate = useNavigate();
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
 
   const checkEmailExists = async (email: string): Promise<boolean> => {
