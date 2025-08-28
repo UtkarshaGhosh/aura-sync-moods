@@ -126,8 +126,11 @@ const Auth: React.FC = () => {
           });
         } else if (data.user && !data.user.email_confirmed_at) {
           // Account created successfully, waiting for email confirmation
+          const successMsg = 'Please check your email and click the confirmation link to activate your account.';
+          setSignupSuccess(successMsg);
+
           toast.success('Account created successfully!', {
-            description: 'Please check your email and click the confirmation link to activate your account.',
+            description: successMsg,
           });
         } else if (data.user && data.user.email_confirmed_at) {
           // Account was created and is already confirmed (shouldn't happen with email confirmation enabled)
