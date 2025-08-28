@@ -445,9 +445,9 @@ const Index = () => {
                   <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
                     <span className="text-2xl font-bold text-primary">2</span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3">Emotion Analysis</h3>
+                  <h3 className="text-xl font-semibold mb-3">Mood Processing</h3>
                   <p className="text-muted-foreground">
-                    Our AI processes your expressions and identifies emotions like happiness, sadness, surprise, and more with remarkable accuracy.
+                    Your selected emotion or uploaded photo is processed to understand your current mood and generate appropriate music recommendations.
                   </p>
                 </div>
                 <div className="md:w-1/2">
