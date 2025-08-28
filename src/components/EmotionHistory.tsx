@@ -68,6 +68,7 @@ const EmotionHistory: React.FC = () => {
         dateFilter = monthAgo.toISOString();
       }
 
+      // First try with music_suggestions, fallback without if table doesn't exist
       let query = supabase
         .from('mood_history')
         .select(`
@@ -81,7 +82,26 @@ const EmotionHistory: React.FC = () => {
         query = query.gte('created_at', dateFilter);
       }
 
-      const { data, error } = await query.limit(50);
+      let { data, error } = await query.limit(50);
+
+      // If music_suggestions table doesn't exist, try without it
+      if (error && (error.code === 'PGRST116' || error.message?.includes('music_suggestions'))) {
+        console.warn('music_suggestions table not found, loading mood history without music suggestions');
+
+        let fallbackQuery = supabase
+          .from('mood_history')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (dateFilter) {
+          fallbackQuery = fallbackQuery.gte('created_at', dateFilter);
+        }
+
+        const fallbackResult = await fallbackQuery.limit(50);
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      }
 
       if (error) {
         console.error('Error loading mood history:', {
