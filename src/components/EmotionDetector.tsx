@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, Upload, HelpCircle, ChevronDown, Download, Trash2 } from 'lucide-react';
+import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, HelpCircle, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as faceapi from 'face-api.js';
 
@@ -34,11 +34,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isModelLoading, setIsModelLoading] = useState(false);
   
   // UI state
-  const [debugMode, setDebugMode] = useState(true);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [showHelp, setShowHelp] = useState(false);
-  const [capturedImages, setCapturedImages] = useState<string[]>([]);
-  const [isCapturing, setIsCapturing] = useState(false);
   const [emotionChanged, setEmotionChanged] = useState(false);
   const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
 
@@ -47,17 +43,13 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Debug logging function
   const addDebugLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     const logMessage = `[${timestamp}] ${message}`;
     console.log(logMessage);
-    if (debugMode) {
-      setDebugLogs(prev => [...prev.slice(-9), logMessage]); // Keep last 10 logs
-    }
-  }, [debugMode]);
+  }, []);
 
   // Get environment info for better error messages
   const getEnvironmentInfo = () => {
@@ -457,126 +449,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     }, 2000); // Slightly slower interval for better performance
   };
 
-  // Handle file upload for image emotion detection
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!modelsLoaded) {
-      await loadModels();
-    }
-
-    try {
-      setIsDetecting(true);
-      setError(null);
-
-      const img = new Image();
-      const canvas = canvasRef.current;
-
-      if (!canvas) {
-        setError('Canvas not available');
-        setIsDetecting(false);
-        return;
-      }
-
-      img.onload = async () => {
-        try {
-          const containerRect = canvas.parentElement?.getBoundingClientRect();
-          if (!containerRect) return;
-
-          const aspectRatio = img.width / img.height;
-          const containerAspectRatio = containerRect.width / containerRect.height;
-
-          let displayWidth, displayHeight;
-          if (aspectRatio > containerAspectRatio) {
-            displayWidth = containerRect.width;
-            displayHeight = containerRect.width / aspectRatio;
-          } else {
-            displayHeight = containerRect.height;
-            displayWidth = containerRect.height * aspectRatio;
-          }
-
-          canvas.width = displayWidth;
-          canvas.height = displayHeight;
-
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
-
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
-
-          // Detect emotions in uploaded image
-          const detections = await faceapi
-            .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-            .withFaceExpressions();
-
-          if (detections.length > 0) {
-            const detection = detections[0];
-            const expressions = detection.expressions;
-            const maxExpression = Object.keys(expressions).reduce((a, b) =>
-              expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
-            );
-
-            // Draw detection box
-            const { x, y, width, height } = detection.detection.box;
-            const scaleX = displayWidth / img.width;
-            const scaleY = displayHeight / img.height;
-
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x * scaleX, y * scaleY, width * scaleX, height * scaleY);
-
-            // Draw emotion label
-            ctx.fillStyle = '#00ff00';
-            ctx.font = '16px Arial';
-            const confidence = expressions[maxExpression as keyof typeof expressions];
-            ctx.fillText(`${maxExpression} (${(confidence * 100).toFixed(0)}%)`, x * scaleX, y * scaleY - 10);
-
-            const emotionMap: { [key: string]: string } = {
-              'happy': 'happy',
-              'sad': 'sad',
-              'angry': 'angry',
-              'surprised': 'surprised',
-              'neutral': 'neutral',
-              'disgusted': 'angry',
-              'fearful': 'surprised'
-            };
-
-            const mappedEmotion = emotionMap[maxExpression] || 'neutral';
-            setDetectedEmotion(mappedEmotion);
-            onEmotionDetected(mappedEmotion, 'upload');
-            
-            // Add to captured images
-            const imageData = canvas.toDataURL('image/png');
-            setCapturedImages(prev => [imageData, ...prev]);
-          } else {
-            setError('No face detected in the uploaded image');
-          }
-
-          setIsDetecting(false);
-        } catch (err) {
-          console.error('Error processing image:', err);
-          setError('Failed to analyze the image');
-          setIsDetecting(false);
-        }
-      };
-
-      img.onerror = () => {
-        setError('Failed to load the image');
-        setIsDetecting(false);
-      };
-
-      img.src = URL.createObjectURL(file);
-    } catch (err) {
-      console.error('Error processing uploaded image:', err);
-      setError('Failed to process uploaded image');
-      setIsDetecting(false);
-    }
-
-    if (event.target) {
-      event.target.value = '';
-    }
-  };
 
   const handleEmotionSelect = (emotion: string) => {
     setDetectedEmotion(emotion);
@@ -689,74 +561,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     }
   };
 
-  // Capture picture from webcam
-  const captureImage = () => {
-    if (!videoRef.current || !canvasRef.current || !isWebcamActive) {
-      return;
-    }
-
-    setIsCapturing(true);
-    addDebugLog('📸 Capturing image from webcam...');
-
-    try {
-      const video = videoRef.current;
-      const captureCanvas = document.createElement('canvas');
-      const captureCtx = captureCanvas.getContext('2d');
-
-      if (!captureCtx) {
-        setIsCapturing(false);
-        return;
-      }
-
-      captureCanvas.width = video.videoWidth;
-      captureCanvas.height = video.videoHeight;
-      captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-
-      const imageData = captureCanvas.toDataURL('image/png');
-      setCapturedImages(prev => [imageData, ...prev]);
-
-      setIsCapturing(false);
-      addDebugLog('✅ Image captured successfully');
-
-      // Flash effect
-      const flashOverlay = document.createElement('div');
-      flashOverlay.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: white; opacity: 0.8; pointer-events: none; z-index: 9999;
-        transition: opacity 0.1s ease-out;
-      `;
-      document.body.appendChild(flashOverlay);
-
-      setTimeout(() => {
-        flashOverlay.style.opacity = '0';
-        setTimeout(() => document.body.removeChild(flashOverlay), 100);
-      }, 50);
-
-    } catch (error) {
-      addDebugLog(`❌ Capture failed: ${error}`);
-      setIsCapturing(false);
-    }
-  };
-
-  // Download captured image
-  const downloadImage = (imageData: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = imageData;
-    link.download = `aurasync-capture-${Date.now()}-${index + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Delete captured image
-  const deleteImage = (index: number) => {
-    setCapturedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // Clear all captured images
-  const clearAllImages = () => {
-    setCapturedImages([]);
-  };
 
   // Handle emotion changes with animations
   useEffect(() => {
@@ -913,39 +717,20 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                 {isLoading ? 'Starting...' : isWebcamActive ? 'Stop Camera' : 'Start Camera'}
               </Button>
 
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                size="sm"
-                disabled={isModelLoading || isDetecting}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Photo
-              </Button>
             </div>
 
             {/* Detection Controls - Only show when webcam is active */}
             {isWebcamActive && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 <Button
                   onClick={detectEmotionNow}
                   variant="default"
                   size="sm"
                   disabled={isDetecting || !modelsLoaded || !isWebcamActive}
-                  className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                  className="flex-1 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
                 >
                   <Zap className="w-4 h-4 mr-2" />
                   {isDetecting ? 'Detecting...' : 'Detect Emotion'}
-                </Button>
-
-                <Button
-                  onClick={captureImage}
-                  variant="secondary"
-                  size="sm"
-                  disabled={isCapturing || !isWebcamActive}
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  {isCapturing ? 'Capturing...' : 'Take Picture'}
                 </Button>
               </div>
             )}
@@ -977,14 +762,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             )}
           </div>
           
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
 
           {/* Help Section */}
           <Collapsible open={showHelp} onOpenChange={setShowHelp}>
@@ -1089,169 +866,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           </div>
         )}
 
-        {/* Captured Images Gallery */}
-        {capturedImages.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                Captured Photos ({capturedImages.length})
-              </h4>
-              <Button
-                onClick={clearAllImages}
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-xs"
-              >
-                <Trash2 className="w-3 h-3 mr-1" />
-                Clear All
-              </Button>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-              {capturedImages.map((imageData, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={imageData}
-                    alt={`Captured ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg border border-border/50"
-                  />
-
-                  {/* Image controls overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                    <Button
-                      onClick={() => downloadImage(imageData, index)}
-                      variant="secondary"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                    >
-                      <Download className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      onClick={() => deleteImage(index)}
-                      variant="destructive"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-
-                  {/* Image number */}
-                  <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
-                    {index + 1}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Debug Panel */}
-        {debugMode && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-muted-foreground">Debug Console</h4>
-              <div className="flex gap-1">
-                <Button
-                  onClick={() => setDebugLogs([])}
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                >
-                  Clear
-                </Button>
-                <Button
-                  onClick={() => {
-                    addDebugLog('🔍 Manual system check');
-                    addDebugLog(`Models loaded: ${modelsLoaded}`);
-                    addDebugLog(`Webcam active: ${isWebcamActive}`);
-                    addDebugLog(`Video ref: ${!!videoRef.current}`);
-                    addDebugLog(`Canvas ref: ${!!canvasRef.current}`);
-                    if (videoRef.current) {
-                      const video = videoRef.current;
-                      addDebugLog(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
-                      addDebugLog(`Video ready state: ${video.readyState}`);
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                >
-                  Test
-                </Button>
-              </div>
-            </div>
-            <div className="bg-black/80 rounded-lg p-3 max-h-40 overflow-y-auto">
-              {debugLogs.length === 0 ? (
-                <p className="text-gray-400 text-xs">No debug logs yet... Click "Test" to run diagnostics</p>
-              ) : (
-                <div className="space-y-1">
-                  {debugLogs.map((log, index) => (
-                    <p key={index} className={`text-xs font-mono leading-tight ${
-                      log.includes('❌') ? 'text-red-400' :
-                      log.includes('✅') ? 'text-green-400' :
-                      log.includes('⚠️') ? 'text-yellow-400' :
-                      log.includes('🎭') ? 'text-purple-400' :
-                      log.includes('👤') ? 'text-blue-400' :
-                      'text-green-300'
-                    }`}>
-                      {log}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setDebugMode(false)}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                Hide Debug
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* System Status Summary */}
-        {!debugMode && (
-          <div className="space-y-2">
-            <div className="text-center p-3 bg-muted/20 rounded-lg">
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">System Status</h4>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className={`flex items-center justify-center space-x-1 ${modelsLoaded ? 'text-green-400' : 'text-red-400'}`}>
-                  <div className={`w-2 h-2 rounded-full ${modelsLoaded ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                  <span>AI Models</span>
-                </div>
-                <div className={`flex items-center justify-center space-x-1 ${isWebcamActive ? 'text-green-400' : 'text-gray-400'}`}>
-                  <div className={`w-2 h-2 rounded-full ${isWebcamActive ? 'bg-green-400' : 'bg-gray-400'}`}></div>
-                  <span>Camera</span>
-                </div>
-                <div className={`flex items-center justify-center space-x-1 ${detectedEmotion ? 'text-green-400' : 'text-gray-400'}`}>
-                  <div className={`w-2 h-2 rounded-full ${detectedEmotion ? 'bg-green-400' : 'bg-gray-400'}`}></div>
-                  <span>Detection</span>
-                </div>
-                <div className={`flex items-center justify-center space-x-1 ${error ? 'text-red-400' : 'text-green-400'}`}>
-                  <div className={`w-2 h-2 rounded-full ${error ? 'bg-red-400' : 'bg-green-400'}`}></div>
-                  <span>Status</span>
-                </div>
-              </div>
-              {error && (
-                <p className="text-xs text-red-400 mt-2">{error}</p>
-              )}
-            </div>
-
-            <Button
-              onClick={() => setDebugMode(true)}
-              variant="outline"
-              size="sm"
-              className="w-full text-xs"
-            >
-              Show Debug Console
-            </Button>
-          </div>
-        )}
       </div>
     </Card>
   );
