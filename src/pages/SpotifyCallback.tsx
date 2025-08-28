@@ -67,9 +67,9 @@ const SpotifyCallback: React.FC = () => {
           description: 'You can now save playlists and get personalized recommendations.',
         });
 
-        // Redirect to profile page after a short delay
+        // Redirect to main app after a short delay
         setTimeout(() => {
-          window.location.href = '/profile';
+          window.location.href = 'https://celadon-hotteok-5d416e.netlify.app';
         }, 2000);
 
       } catch (error) {
