@@ -27,6 +27,7 @@ interface MusicRecommendationsProps {
   emotion: string;
   onSavePlaylist: (tracks: Track[]) => void;
   className?: string;
+  moodHistoryId?: number; // ID of the mood history entry to link music suggestions to
 }
 
 // Mock data for different emotions
@@ -140,7 +141,8 @@ const mockRecommendations: Record<string, Track[]> = {
 const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   emotion,
   onSavePlaylist,
-  className
+  className,
+  moodHistoryId
 }) => {
   const { user } = useAuth();
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -250,6 +252,11 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       }
 
       setTracks(newTracks);
+
+      // Save music suggestions to database if moodHistoryId is provided
+      if (moodHistoryId && newTracks.length > 0) {
+        await saveMusicSuggestions(newTracks, moodHistoryId);
+      }
     } catch (error) {
       console.error('🎵 [MusicRecs] Error generating playlist:', error);
       if (error instanceof Error) {
@@ -279,6 +286,36 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         return ['electronic', 'pop', 'dance'];
       default:
         return ['pop', 'indie', 'alternative'];
+    }
+  };
+
+  // Save music suggestions to database
+  const saveMusicSuggestions = async (tracks: Track[], moodHistoryId: number) => {
+    if (!user || !moodHistoryId) return;
+
+    try {
+      const musicSuggestions = tracks.map(track => ({
+        mood_history_id: moodHistoryId,
+        track_id: track.id,
+        track_name: track.name,
+        artist_name: track.artist,
+        album_name: track.album,
+        image_url: track.image !== '/placeholder.svg' ? track.image : null,
+        preview_url: track.preview_url,
+        spotify_url: track.spotify_url || null,
+      }));
+
+      const { error } = await supabase
+        .from('music_suggestions')
+        .insert(musicSuggestions);
+
+      if (error) {
+        console.error('Error saving music suggestions:', error);
+      } else {
+        console.log('Music suggestions saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving music suggestions:', error);
     }
   };
 

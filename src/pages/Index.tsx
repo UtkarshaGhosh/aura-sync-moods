@@ -5,7 +5,7 @@ import EmotionDetector from '@/components/EmotionDetector';
 import MusicRecommendations from '@/components/MusicRecommendations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Music, Settings, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
+import { Music, User, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { createPlaylist, addTracksToPlaylist } from '@/lib/spotify';
@@ -22,6 +22,7 @@ interface Track {
 
 const Index = () => {
   const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
+  const [currentMoodHistoryId, setCurrentMoodHistoryId] = useState<number | null>(null);
   const { user, loading, signOut, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [spotifyCredentials, setSpotifyCredentials] = useState<{
@@ -134,20 +135,26 @@ const Index = () => {
 
   const handleEmotionDetected = async (emotion: string, source: 'webcam' | 'emoji' | 'upload') => {
     setCurrentEmotion(emotion);
-    
-    // Save to mood_history table
+
+    // Save to mood_history table and get the generated music suggestions
     if (user) {
       try {
-        const { error } = await supabase
+        const { data: moodEntry, error } = await supabase
           .from('mood_history')
           .insert({
             user_id: user.id,
             emotion,
             source
-          });
-        
+          })
+          .select()
+          .single();
+
         if (error) {
           console.error('Error saving mood history:', error);
+        } else if (moodEntry) {
+          console.log('Mood history saved successfully:', moodEntry);
+          setCurrentMoodHistoryId(moodEntry.id);
+          // Music suggestions will be saved separately when MusicRecommendations component generates them
         }
       } catch (error) {
         console.error('💥 Error saving mood history:', error);
@@ -156,7 +163,7 @@ const Index = () => {
         }
       }
     }
-    
+
   };
 
   const handleSavePlaylist = async (tracks: Track[]) => {
@@ -276,8 +283,8 @@ const Index = () => {
             </nav>
 
             <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
+              <User className="w-4 h-4 mr-2" />
+              Profile
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -347,6 +354,7 @@ const Index = () => {
             <MusicRecommendations
               emotion={currentEmotion}
               onSavePlaylist={handleSavePlaylist}
+              moodHistoryId={currentMoodHistoryId}
             />
           </div>
         </div>

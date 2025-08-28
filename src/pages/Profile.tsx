@@ -8,21 +8,25 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  User, 
-  Music, 
-  ArrowLeft, 
-  Save, 
-  Trash2, 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  User,
+  Music,
+  ArrowLeft,
+  Save,
+  Trash2,
   ExternalLink,
   CheckCircle,
   XCircle,
-  Settings
+  Settings,
+  History,
+  TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getSpotifyAuthUrl } from '@/lib/spotify';
+import EmotionHistory from '@/components/EmotionHistory';
 
 interface UserProfile {
   id: string;
@@ -196,9 +200,23 @@ const Profile: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Profile Information */}
-          <div className="lg:col-span-2 space-y-6">
+        {/* Main Content */}
+        <Tabs defaultValue="settings" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Emotion History
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="settings">
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Profile Information */}
+              <div className="lg:col-span-2 space-y-6">
             <Card className="glass border-border/50">
               <div className="p-6">
                 <div className="flex items-center gap-4 mb-6">
@@ -370,8 +388,14 @@ const Profile: React.FC = () => {
                 </div>
               </div>
             </Card>
-          </div>
-        </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history">
+            <EmotionHistory />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
