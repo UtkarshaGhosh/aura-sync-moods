@@ -35,6 +35,7 @@ const SpotifyCallback: React.FC = () => {
         return;
       }
 
+      // This check is now safe because the useEffect waits for the user object
       if (!user) {
         setStatus('error');
         setErrorMessage('User not authenticated');
@@ -82,12 +83,16 @@ const SpotifyCallback: React.FC = () => {
       }
     };
 
-    handleCallback();
-  }, [searchParams, user]);
+    // Only run the handleCallback function if the user object is available.
+    if (user) {
+        handleCallback();
+    }
+  }, [searchParams, user]); // Added user to the dependency array
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && status !== 'processing') {
     return <Navigate to="/auth" replace />;
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/5">
@@ -146,8 +151,8 @@ const SpotifyCallback: React.FC = () => {
                   </Alert>
                 )}
                 <div className="pt-4">
-                  <a 
-                    href="/profile" 
+                  <a
+                    href="/profile"
                     className="text-primary hover:text-primary/80 underline"
                   >
                     Return to Profile
