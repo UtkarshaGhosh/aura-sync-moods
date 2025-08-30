@@ -268,17 +268,17 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       if (error instanceof Error) {
         addDebugLog(`Error details: ${error.name} - ${error.message}`);
         if (error.name === 'NotAllowedError') {
-          errorMessage = 'Camera permission denied. Click the camera icon in your browser\'s address bar to allow access, then try again.';
+          errorMessage = 'Camera permission denied.';
         } else if (error.name === 'NotFoundError') {
-          errorMessage = 'No camera found. Please connect a camera and try again.';
+          errorMessage = 'No camera found.';
         } else if (error.name === 'NotReadableError') {
-          errorMessage = 'Camera is in use by another application. Close other apps using the camera and try again.';
+          errorMessage = 'Camera is in use by another application.';
         } else if (error.name === 'AbortError') {
-          errorMessage = 'Camera access was interrupted. Please try again.';
+          errorMessage = 'Camera access was interrupted.';
         } else if (error.message.includes('Video failed to load')) {
-          errorMessage = 'Video playback failed. Try refreshing the page.';
+          errorMessage = 'Video playback failed.';
         } else if (error.message.includes('getUserMedia not supported')) {
-          errorMessage = 'Camera not supported in this browser. Try using Chrome, Firefox, or Safari.';
+          errorMessage = 'Camera not supported in this browser.';
         }
       }
 
