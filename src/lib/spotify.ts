@@ -119,8 +119,8 @@ export const exchangeCodeForTokens = async (code: string, state: string) => {
 
 // Make authenticated request to Spotify API
 export const spotifyApiRequest = async (
-  endpoint: string, 
-  accessToken: string, 
+  endpoint: string,
+  accessToken: string,
   options: RequestInit = {}
 ): Promise<any> => {
   const response = await fetch(`https://api.spotify.com/v1${endpoint}`, {
@@ -149,8 +149,8 @@ export const getSpotifyProfile = async (accessToken: string): Promise<SpotifyUse
 
 // Search for tracks
 export const searchTracks = async (
-  query: string, 
-  accessToken: string, 
+  query: string,
+  accessToken: string,
   limit: number = 20
 ): Promise<{ tracks: { items: SpotifyTrack[] } }> => {
   const params = new URLSearchParams({
@@ -176,7 +176,7 @@ export const getRecommendations = async (
   }
 ): Promise<{ tracks: SpotifyTrack[] }> => {
   const params = new URLSearchParams();
-  
+
   if (options.seedGenres?.length) {
     params.append('seed_genres', options.seedGenres.join(','));
   }
