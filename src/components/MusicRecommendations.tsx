@@ -10,7 +10,8 @@ import {
   getRecommendations,
   getEmotionAudioFeatures,
   convertSpotifyTrack,
-  SpotifyTrack
+  SpotifyTrack,
+  refreshSpotifyToken
 } from '@/lib/spotify';
 
 interface Track {
@@ -32,28 +33,11 @@ interface MusicRecommendationsProps {
 
 // Mock data for different emotions
 const mockRecommendations: Record<string, Track[]> = {
-  happy: [
-    { id: 'mock-1', name: 'Good as Hell', artist: 'Lizzo', album: 'Good as Hell', image: '/placeholder.svg', preview_url: null, },
-    { id: 'mock-2', name: 'Can\'t Stop the Feeling!', artist: 'Justin Timberlake', album: 'Trolls', image: '/placeholder.svg', preview_url: null, },
-    { id: 'mock-3', name: 'Happy', artist: 'Pharrell Williams', album: 'Girl', image: '/placeholder.svg', preview_url: null, },
-  ],
-  sad: [
-    { id: 'mock-4', name: 'Someone Like You', artist: 'Adele', album: '21', image: '/placeholder.svg', preview_url: null, },
-    { id: 'mock-5', name: 'Breathe Me', artist: 'Sia', album: 'Colour the Small One', image: '/placeholder.svg', preview_url: null, },
-    { id: 'mock-6', name: 'Mad World', artist: 'Gary Jules', album: 'Donnie Darko', image: '/placeholder.svg', preview_url: null, },
-  ],
-  calm: [
-      { id: 'mock-7', name: 'Weightless', artist: 'Marconi Union', album: 'Weightless', image: '/placeholder.svg', preview_url: null, },
-      { id: 'mock-8', name: 'River', artist: 'Leon Bridges', album: 'Coming Home', image: '/placeholder.svg', preview_url: null, },
-      { id: 'mock-9', name: 'Holocene', artist: 'Bon Iver', album: 'Bon Iver, Bon Iver', image: '/placeholder.svg', preview_url: null, },
-  ],
-  neutral: [
-      { id: 'mock-10', name: 'The Middle', artist: 'Jimmy Eat World', album: 'Bleed American', image: '/placeholder.svg', preview_url: null, },
-      { id: 'mock-11', name: 'Dreams', artist: 'Fleetwood Mac', album: 'Rumours', image: '/placeholder.svg', preview_url: null, },
-      { id: 'mock-12', name: 'Losing You', artist: 'Solange', album: 'True', image: '/placeholder.svg', preview_url: null, },
-  ],
+    happy: [ { id: 'mock-1', name: 'Good as Hell', artist: 'Lizzo', album: 'Good as Hell', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-2', name: 'Can\'t Stop the Feeling!', artist: 'Justin Timberlake', album: 'Trolls', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-3', name: 'Happy', artist: 'Pharrell Williams', album: 'Girl', image: '/placeholder.svg', preview_url: null, }, ],
+    sad: [ { id: 'mock-4', name: 'Someone Like You', artist: 'Adele', album: '21', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-5', name: 'Breathe Me', artist: 'Sia', album: 'Colour the Small One', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-6', name: 'Mad World', artist: 'Gary Jules', album: 'Donnie Darko', image: '/placeholder.svg', preview_url: null, }, ],
+    calm: [ { id: 'mock-7', name: 'Weightless', artist: 'Marconi Union', album: 'Weightless', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-8', name: 'River', artist: 'Leon Bridges', album: 'Coming Home', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-9', name: 'Holocene', artist: 'Bon Iver', album: 'Bon Iver, Bon Iver', image: '/placeholder.svg', preview_url: null, }, ],
+    neutral: [ { id: 'mock-10', name: 'The Middle', artist: 'Jimmy Eat World', album: 'Bleed American', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-11', name: 'Dreams', artist: 'Fleetwood Mac', album: 'Rumours', image: '/placeholder.svg', preview_url: null, }, { id: 'mock-12', name: 'Losing You', artist: 'Solange', album: 'True', image: '/placeholder.svg', preview_url: null, }, ],
 };
-
 
 const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   emotion,
@@ -68,90 +52,88 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
 
+  const getSpotifyTracks = async (accessToken: string) => {
+    const audioFeatures = getEmotionAudioFeatures(emotion);
+    const response = await getRecommendations(accessToken, {
+        seedGenres: getGenresForEmotion(emotion),
+        ...audioFeatures,
+        limit: 10,
+    });
+    return response.tracks.map(convertSpotifyTrack);
+  };
+
   const generatePlaylist = useCallback(async () => {
     setIsGenerating(true);
+    setTracks([]);
 
-    let spotifyAccessToken: string | null = null;
-    if (user) {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('access_token, spotify_user_id')
-                .eq('id', user.id)
-                .single();
-            
-            if (data?.access_token && data?.spotify_user_id) {
-                spotifyAccessToken = data.access_token;
-                setIsSpotifyConnected(true);
-            } else {
-                setIsSpotifyConnected(false);
-            }
-            if (error && error.code !== 'PGRST116') { // PGRST116: row not found
-                console.error("Error fetching spotify token:", error);
-            }
-        } catch (e) {
-            console.error("Exception fetching spotify token:", e);
-        }
+    if (!user) {
+        setTracks(mockRecommendations[emotion] || mockRecommendations.neutral);
+        setIsGenerating(false);
+        return;
     }
-
 
     try {
-      let newTracks: Track[];
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('access_token, refresh_token, spotify_user_id')
+            .eq('id', user.id)
+            .single();
 
-      if (spotifyAccessToken) {
-        try {
-          const audioFeatures = getEmotionAudioFeatures(emotion);
-          const response = await getRecommendations(spotifyAccessToken, {
-            seedGenres: getGenresForEmotion(emotion),
-            ...audioFeatures,
-            limit: 10,
-          });
-          newTracks = response.tracks.map(convertSpotifyTrack);
-
-          if (newTracks.length > 0) {
-            toast.success(`Perfect ${emotion} vibes found!`, {
-              description: `Generated ${newTracks.length} personalized tracks from Spotify.`,
-            });
-          } else {
-             newTracks = mockRecommendations[emotion] || mockRecommendations.neutral;
-             toast.info(`Could not find Spotify tracks for ${emotion}`, {
-                description: 'Displaying sample recommendations instead.',
-            });
-          }
-        } catch (error) {
-          console.error('🎵 [MusicRecs] Spotify API error, falling back to mock:', error);
-          if (error instanceof Error && error.message === 'SPOTIFY_TOKEN_EXPIRED') {
+        if (profileError || !profile?.access_token || !profile?.refresh_token) {
             setIsSpotifyConnected(false);
-            toast.error('Spotify session expired', {
-              description: 'Please reconnect your Spotify account in your profile.',
+            setTracks(mockRecommendations[emotion] || mockRecommendations.neutral);
+            toast.info(`Sample ${emotion} tracks`, {
+                description: 'Connect Spotify in your profile for personalized music.',
             });
-          }
-          newTracks = mockRecommendations[emotion] || mockRecommendations.neutral;
+            return;
         }
-      } else {
-        newTracks = mockRecommendations[emotion] || mockRecommendations.neutral;
-        if (user) {
-          toast.info(`Sample ${emotion} tracks`, {
-            description: 'Connect Spotify in your profile for personalized music.',
-          });
+
+        setIsSpotifyConnected(true);
+        let currentAccessToken = profile.access_token;
+
+        try {
+            const newTracks = await getSpotifyTracks(currentAccessToken);
+            setTracks(newTracks);
+            toast.success(`Perfect ${emotion} vibes found!`, {
+                description: `Generated ${newTracks.length} personalized tracks from Spotify.`,
+            });
+        } catch (error) {
+            if (error instanceof Error && error.message === 'SPOTIFY_TOKEN_EXPIRED') {
+                toast.info('Spotify token expired. Refreshing automatically...');
+                try {
+                    const newTokens = await refreshSpotifyToken(profile.refresh_token);
+                    await supabase.from('profiles').update({
+                        access_token: newTokens.access_token,
+                        refresh_token: newTokens.refresh_token
+                    }).eq('id', user.id);
+                    
+                    currentAccessToken = newTokens.access_token;
+                    const newTracks = await getSpotifyTracks(currentAccessToken);
+                    setTracks(newTracks);
+                    toast.success('Spotify connection refreshed!', {
+                        description: 'Here are your new recommendations.',
+                    });
+                } catch (refreshError) {
+                    console.error('Failed to refresh Spotify token:', refreshError);
+                    setIsSpotifyConnected(false);
+                    setTracks(mockRecommendations[emotion] || mockRecommendations.neutral);
+                    toast.error('Could not refresh Spotify session.', {
+                        description: 'Please disconnect and reconnect your account in your profile.',
+                    });
+                }
+            } else {
+                throw error;
+            }
         }
-      }
-
-      setTracks(newTracks);
-
-      if (moodHistoryId && newTracks.length > 0) {
-        await saveMusicSuggestions(newTracks, moodHistoryId);
-      }
     } catch (error) {
-      console.error('🎵 [MusicRecs] Error generating playlist:', error);
-      toast.error('Failed to generate recommendations');
-      setTracks(mockRecommendations[emotion] || mockRecommendations.neutral);
+        console.error('🎵 [MusicRecs] Error generating playlist:', error);
+        toast.error('Failed to generate recommendations.');
+        setTracks(mockRecommendations[emotion] || mockRecommendations.neutral);
     } finally {
-      setIsGenerating(false);
+        setIsGenerating(false);
     }
-  }, [emotion, user, moodHistoryId]);
+  }, [emotion, user]);
 
-  // Helper function to get genres for emotions
   const getGenresForEmotion = (emotion: string): string[] => {
     switch (emotion.toLowerCase()) {
       case 'happy': return ['pop', 'dance', 'funk'];
@@ -163,43 +145,30 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     }
   };
 
-  // Save music suggestions to database
   const saveMusicSuggestions = async (tracks: Track[], moodHistoryId: number) => {
-    if (!user || !moodHistoryId) return;
-
-    const musicSuggestions = tracks.map(track => ({
-      mood_history_id: moodHistoryId,
-      track_id: track.id,
-      track_name: track.name,
-      artist_name: track.artist,
-      album_name: track.album,
-      image_url: track.image !== '/placeholder.svg' ? track.image : null,
-      preview_url: track.preview_url,
-      spotify_url: track.spotify_url || null,
-    }));
-
-    const { error } = await supabase
-      .from('music_suggestions')
-      .insert(musicSuggestions);
-
-    if (error) {
-      console.error('Error saving music suggestions:', error);
-    }
+    // This function is now called from Index.tsx
   };
 
   const handlePlayPause = (trackId: string) => {
-    // Implement audio playback logic here
+    if (currentTrack === trackId && isPlaying) {
+      setIsPlaying(false);
+      setCurrentTrack(null);
+    } else {
+      setIsPlaying(true);
+      setCurrentTrack(trackId);
+    }
   };
 
   const handleSavePlaylist = () => {
     onSavePlaylist(tracks);
   };
-
+  
   useEffect(() => {
     if (emotion) {
       generatePlaylist();
     }
   }, [emotion, generatePlaylist]);
+
 
   return (
     <Card className={cn("glass border-border/50", className)}>
