@@ -158,18 +158,33 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   const getSpotifyPlaylists = async (accessToken: string) => {
     const genre = getEmotionGenre(emotion);
     const searchQuery = `${genre} ${emotion}`;
-    
-    const response = await searchPlaylists(accessToken, searchQuery, 20);
-    
-    return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
-      id: playlist.id,
-      name: playlist.name,
-      description: playlist.description || `Curated ${emotion} playlist`,
-      image: playlist.images[0]?.url || '/placeholder.svg',
-      trackCount: playlist.tracks.total,
-      owner: playlist.owner.display_name,
-      spotifyUrl: playlist.external_urls.spotify
-    }));
+
+    console.log(`🎵 Searching Spotify for: "${searchQuery}"`);
+
+    try {
+      const response = await searchPlaylists(accessToken, searchQuery, 20);
+      console.log('🎵 Spotify search response:', response);
+
+      if (!response.playlists || !response.playlists.items) {
+        console.warn('🎵 No playlists in response:', response);
+        return [];
+      }
+
+      console.log(`🎵 Found ${response.playlists.items.length} playlists`);
+
+      return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
+        id: playlist.id,
+        name: playlist.name,
+        description: playlist.description || `Curated ${emotion} playlist`,
+        image: playlist.images[0]?.url || '/placeholder.svg',
+        trackCount: playlist.tracks.total,
+        owner: playlist.owner.display_name,
+        spotifyUrl: playlist.external_urls.spotify
+      }));
+    } catch (error) {
+      console.error('🎵 Error in getSpotifyPlaylists:', error);
+      throw error;
+    }
   };
 
   const generatePlaylists = useCallback(async () => {
