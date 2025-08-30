@@ -1,17 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Play, Pause, Save, Music, Shuffle, ExternalLink } from 'lucide-react';
+import { Play, Save, Music, Shuffle, ExternalLink, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  getRecommendations,
-  getEmotionAudioFeatures,
-  convertSpotifyTrack,
-  SpotifyTrack,
-  refreshSpotifyToken
+  searchPlaylists,
+  getEmotionGenre,
+  refreshSpotifyToken,
+  SpotifyPlaylist
 } from '@/lib/spotify';
 
 export interface Track {
@@ -31,100 +30,92 @@ interface MusicRecommendationsProps {
   moodHistoryId?: number | null;
 }
 
-const mockRecommendations: Record<string, Track[]> = {
+interface PlaylistDisplay {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  trackCount: number;
+  owner: string;
+  spotifyUrl: string;
+}
+
+const mockPlaylists: Record<string, PlaylistDisplay[]> = {
   happy: [
     {
       id: 'mock-h-1',
-      name: 'Sunny Days',
-      artist: 'The Brights',
-      album: 'Gold Sky',
+      name: 'Feel Good Pop Hits',
+      description: 'Upbeat songs to brighten your day',
       image: '/placeholder.svg',
-      preview_url: null,
-      spotify_url: ''
+      trackCount: 50,
+      owner: 'Spotify',
+      spotifyUrl: ''
     },
     {
       id: 'mock-h-2',
-      name: 'Smile Again',
-      artist: 'Good Vibes',
-      album: 'Feel Great',
+      name: 'Happy Vibes Only',
+      description: 'Pure happiness in musical form',
       image: '/placeholder.svg',
-      preview_url: null,
-      spotify_url: ''
+      trackCount: 30,
+      owner: 'Music Curator',
+      spotifyUrl: ''
     }
   ],
   sad: [
     {
       id: 'mock-s-1',
-      name: 'Blue Hour',
-      artist: 'Quiet Rivers',
-      album: 'Rainy Streets',
+      name: 'Rainy Day Acoustics',
+      description: 'Gentle songs for reflection',
       image: '/placeholder.svg',
-      preview_url: null,
-      spotify_url: ''
+      trackCount: 25,
+      owner: 'Indie Collective',
+      spotifyUrl: ''
     }
   ],
   angry: [
     {
       id: 'mock-a-1',
-      name: 'Roar Inside',
-      artist: 'Voltage',
-      album: 'Ignite',
+      name: 'Rock Rage',
+      description: 'Channel your energy with powerful rock',
       image: '/placeholder.svg',
-      preview_url: null,
-      spotify_url: ''
+      trackCount: 40,
+      owner: 'Rock Central',
+      spotifyUrl: ''
     }
   ],
   calm: [
     {
       id: 'mock-c-1',
-      name: 'Gentle Breeze',
-      artist: 'Evening Shore',
-      album: 'Sea Foam',
+      name: 'Peaceful Moments',
+      description: 'Ambient sounds for relaxation',
       image: '/placeholder.svg',
-      preview_url: null,
-      spotify_url: ''
+      trackCount: 35,
+      owner: 'Zen Music',
+      spotifyUrl: ''
     }
   ],
   excited: [
     {
       id: 'mock-e-1',
-      name: 'Lift Off',
-      artist: 'Star Trails',
-      album: 'Orbit',
+      name: 'Electronic Energy',
+      description: 'High-energy electronic beats',
       image: '/placeholder.svg',
-      preview_url: null,
-      spotify_url: ''
+      trackCount: 45,
+      owner: 'EDM Masters',
+      spotifyUrl: ''
     }
   ],
   neutral: [
     {
       id: 'mock-n-1',
-      name: 'Wandering',
-      artist: 'Open Roads',
-      album: 'Horizons',
+      name: 'Chill Mix',
+      description: 'Relaxed music for any mood',
       image: '/placeholder.svg',
-      preview_url: null,
-      spotify_url: ''
+      trackCount: 30,
+      owner: 'Chill Hub',
+      spotifyUrl: ''
     }
   ]
-};
-
-const getGenresForEmotion = (emotion: string): string[] => {
-  switch (emotion.toLowerCase()) {
-    case 'happy':
-      return ['pop', 'dance', 'indie-pop'];
-    case 'sad':
-      return ['acoustic', 'piano', 'ambient'];
-    case 'angry':
-      return ['rock', 'metal', 'hard-rock'];
-    case 'calm':
-      return ['chill', 'lo-fi', 'ambient'];
-    case 'excited':
-      return ['edm', 'house', 'electro'];
-    case 'neutral':
-    default:
-      return ['pop', 'indie', 'alternative'];
-  }
 };
 
 const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
@@ -134,92 +125,61 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   moodHistoryId
 }) => {
   const { user } = useAuth();
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<string | null>(null);
+  const [playlists, setPlaylists] = useState<PlaylistDisplay[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistDisplay | null>(null);
 
-  const headerText = useMemo(() => `Music for your ${emotion} mood`, [emotion]);
+  const headerText = useMemo(() => `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} Playlists`, [emotion]);
 
-  const stopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    setIsPlaying(false);
-    setCurrentTrack(null);
-  };
-
-  const playPreview = (track: Track) => {
-    if (!track.preview_url) {
-      toast.info('No preview available for this track');
-      return;
-    }
-    if (currentTrack === track.id && isPlaying) {
-      stopAudio();
-      return;
-    }
+  const insertPlaylistSuggestions = async (playlistSuggestions: PlaylistDisplay[]) => {
+    if (!user || !moodHistoryId || playlistSuggestions.length === 0) return;
     try {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      audioRef.current = new Audio(track.preview_url);
-      audioRef.current.onended = () => {
-        setIsPlaying(false);
-        setCurrentTrack(null);
-      };
-      setCurrentTrack(track.id);
-      setIsPlaying(true);
-      audioRef.current.play().catch(() => {
-        setIsPlaying(false);
-        toast.error('Could not play preview');
-      });
-    } catch (e) {
-      setIsPlaying(false);
-    }
-  };
-
-  const insertSuggestions = async (suggestions: Track[]) => {
-    if (!user || !moodHistoryId || suggestions.length === 0) return;
-    try {
-      const payload = suggestions.map((t) => ({
+      // Convert playlists to track format for compatibility with existing schema
+      const payload = playlistSuggestions.map((playlist, index) => ({
         mood_history_id: moodHistoryId,
-        track_id: t.id,
-        track_name: t.name,
-        artist_name: t.artist,
-        album_name: t.album,
-        image_url: t.image,
-        preview_url: t.preview_url,
-        spotify_url: t.spotify_url || null
+        track_id: playlist.id,
+        track_name: playlist.name,
+        artist_name: playlist.owner,
+        album_name: 'Playlist',
+        image_url: playlist.image,
+        preview_url: null,
+        spotify_url: playlist.spotifyUrl
       }));
       const { error } = await supabase.from('music_suggestions').insert(payload);
       if (error) {
-        console.warn('Failed to save music suggestions:', error.message);
+        console.warn('Failed to save playlist suggestions:', error.message);
       }
     } catch (e) {
-      console.warn('Unexpected error saving suggestions', e);
+      console.warn('Unexpected error saving playlist suggestions', e);
     }
   };
 
-  const getSpotifyTracks = async (accessToken: string) => {
-    const audioFeatures = getEmotionAudioFeatures(emotion);
-    const response = await getRecommendations(accessToken, {
-      seedGenres: getGenresForEmotion(emotion),
-      ...audioFeatures,
-      limit: 10
-    });
-    return response.tracks.map(convertSpotifyTrack);
+  const getSpotifyPlaylists = async (accessToken: string) => {
+    const genre = getEmotionGenre(emotion);
+    const searchQuery = `${genre} ${emotion}`;
+    
+    const response = await searchPlaylists(accessToken, searchQuery, 20);
+    
+    return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
+      id: playlist.id,
+      name: playlist.name,
+      description: playlist.description || `Curated ${emotion} playlist`,
+      image: playlist.images[0]?.url || '/placeholder.svg',
+      trackCount: playlist.tracks.total,
+      owner: playlist.owner.display_name,
+      spotifyUrl: playlist.external_urls.spotify
+    }));
   };
 
-  const generatePlaylist = useCallback(async () => {
+  const generatePlaylists = useCallback(async () => {
     setIsGenerating(true);
-    setTracks([]);
+    setPlaylists([]);
+    setSelectedPlaylist(null);
 
     if (!user) {
-      const fallback = mockRecommendations[emotion] || mockRecommendations.neutral;
-      setTracks(fallback);
+      const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
+      setPlaylists(fallback);
       setIsGenerating(false);
       return;
     }
@@ -233,10 +193,10 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
       if (profileError || !profile?.access_token) {
         setIsSpotifyConnected(false);
-        const fallback = mockRecommendations[emotion] || mockRecommendations.neutral;
-        setTracks(fallback);
-        toast.info(`Sample ${emotion} tracks`, {
-          description: 'Connect Spotify in your profile for personalized music.'
+        const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
+        setPlaylists(fallback);
+        toast.info(`Sample ${emotion} playlists`, {
+          description: 'Connect Spotify in your profile for personalized playlists.'
         });
         return;
       }
@@ -245,19 +205,19 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       let currentAccessToken = profile.access_token as string;
 
       try {
-        const newTracks = await getSpotifyTracks(currentAccessToken);
-        const converted: Track[] = newTracks.map((t: any) => t);
-        setTracks(converted);
-        insertSuggestions(converted);
-        if (converted.length > 0) {
-          toast.success(`Perfect ${emotion} vibes found!`, {
-            description: `Generated ${converted.length} personalized tracks from Spotify.`
+        const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
+        setPlaylists(newPlaylists);
+        insertPlaylistSuggestions(newPlaylists);
+        
+        if (newPlaylists.length > 0) {
+          toast.success(`Found ${emotion} playlists!`, {
+            description: `Discovered ${newPlaylists.length} playlists matching your mood.`
           });
         } else {
-          const fallback = mockRecommendations[emotion] || mockRecommendations.neutral;
-          setTracks(fallback);
-          toast.info(`Could not find Spotify tracks for ${emotion}`, {
-            description: 'Displaying sample recommendations instead.'
+          const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
+          setPlaylists(fallback);
+          toast.info(`No Spotify playlists found for ${emotion}`, {
+            description: 'Showing sample playlists instead.'
           });
         }
       } catch (error: any) {
@@ -271,18 +231,17 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
               .eq('id', user.id);
 
             currentAccessToken = newTokens.access_token;
-            const newTracks = await getSpotifyTracks(currentAccessToken);
-            const converted: Track[] = newTracks.map((t: any) => t);
-            setTracks(converted);
-            insertSuggestions(converted);
+            const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
+            setPlaylists(newPlaylists);
+            insertPlaylistSuggestions(newPlaylists);
             toast.success('Spotify connection refreshed!', {
-              description: 'Here are your new recommendations.'
+              description: 'Here are your new playlist recommendations.'
             });
           } catch (refreshError) {
             console.error('Failed to refresh Spotify token:', refreshError);
             setIsSpotifyConnected(false);
-            const fallback = mockRecommendations[emotion] || mockRecommendations.neutral;
-            setTracks(fallback);
+            const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
+            setPlaylists(fallback);
             toast.error('Could not refresh Spotify session.', {
               description: 'Please disconnect and reconnect your account in your profile.'
             });
@@ -292,10 +251,10 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error generating playlist:', error);
-      toast.error('Failed to generate recommendations.');
-      const fallback = mockRecommendations[emotion] || mockRecommendations.neutral;
-      setTracks(fallback);
+      console.error('Error generating playlists:', error);
+      toast.error('Failed to generate playlist recommendations.');
+      const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
+      setPlaylists(fallback);
     } finally {
       setIsGenerating(false);
     }
@@ -303,17 +262,25 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
   useEffect(() => {
     if (emotion) {
-      generatePlaylist();
+      generatePlaylists();
     }
-    // Stop any playing audio on emotion change
-    return () => stopAudio();
-  }, [emotion, generatePlaylist]);
+  }, [emotion, generatePlaylists]);
 
   const handleSave = () => {
-    if (tracks.length === 0) {
-      toast.info('Nothing to save yet');
+    if (playlists.length === 0) {
+      toast.info('No playlists to save yet');
       return;
     }
+    // Convert playlists to tracks format for compatibility
+    const tracks: Track[] = playlists.map(playlist => ({
+      id: playlist.id,
+      name: playlist.name,
+      artist: playlist.owner,
+      album: 'Playlist',
+      image: playlist.image,
+      preview_url: null,
+      spotify_url: playlist.spotifyUrl
+    }));
     onSavePlaylist(tracks);
   };
 
@@ -326,50 +293,95 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             <h3 className="text-lg font-semibold">{headerText}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={generatePlaylist} disabled={isGenerating}>
+            <Button variant="outline" size="sm" onClick={generatePlaylists} disabled={isGenerating}>
               <Shuffle className="w-4 h-4 mr-2" />
-              {isGenerating ? 'Generating...' : 'New Mix'}
+              {isGenerating ? 'Finding...' : 'Refresh'}
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!isSpotifyConnected || tracks.length === 0}>
+            <Button size="sm" onClick={handleSave} disabled={!isSpotifyConnected || playlists.length === 0}>
               <Save className="w-4 h-4 mr-2" />
-              Save Playlist
+              Save
             </Button>
           </div>
         </div>
 
-        {tracks.length === 0 && (
-          <div className="text-sm text-muted-foreground">No tracks yet. Generate a mix to get started.</div>
+        {playlists.length === 0 && !isGenerating && (
+          <div className="text-sm text-muted-foreground">No playlists yet. Click refresh to get started.</div>
         )}
 
-        <div className="space-y-3">
-          {tracks.map((track) => (
-            <div key={track.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/20">
-              <img src={track.image} alt={track.name} className="w-12 h-12 rounded object-cover" />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{track.name}</div>
-                <div className="text-sm text-muted-foreground truncate">{track.artist} • {track.album}</div>
-              </div>
-              {track.spotify_url && (
-                <Button variant="ghost" size="icon" onClick={() => window.open(track.spotify_url!, '_blank')} aria-label="Open in Spotify">
-                  <ExternalLink className="w-4 h-4" />
-                </Button>
+        {isGenerating && (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="ml-3 text-muted-foreground">Finding the perfect {emotion} playlists...</span>
+          </div>
+        )}
+
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {playlists.map((playlist) => (
+            <div 
+              key={playlist.id} 
+              className={cn(
+                "flex items-center gap-4 p-3 rounded-lg bg-muted/20 cursor-pointer transition-all hover:bg-muted/30",
+                selectedPlaylist?.id === playlist.id && "ring-2 ring-primary"
               )}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => playPreview(track)}
-                disabled={!track.preview_url}
-                aria-label={currentTrack === track.id && isPlaying ? 'Pause preview' : 'Play preview'}
-              >
-                {currentTrack === track.id && isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </Button>
+              onClick={() => setSelectedPlaylist(playlist)}
+            >
+              <img src={playlist.image} alt={playlist.name} className="w-16 h-16 rounded object-cover" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{playlist.name}</div>
+                <div className="text-sm text-muted-foreground truncate">{playlist.description}</div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                  <Users className="w-3 h-3" />
+                  {playlist.owner} • {playlist.trackCount} tracks
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {playlist.spotifyUrl && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(playlist.spotifyUrl, '_blank');
+                    }} 
+                    aria-label="Open in Spotify"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPlaylist(playlist);
+                  }}
+                  aria-label="Select playlist"
+                >
+                  <Play className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
 
+        {selectedPlaylist && selectedPlaylist.spotifyUrl && (
+          <div className="mt-4 p-4 bg-muted/10 rounded-lg">
+            <h4 className="font-medium mb-2">Now Playing: {selectedPlaylist.name}</h4>
+            <iframe
+              src={`https://open.spotify.com/embed/playlist/${selectedPlaylist.id}?utm_source=generator&theme=0`}
+              width="100%"
+              height="380"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-lg"
+            />
+          </div>
+        )}
+
         {!isSpotifyConnected && (
           <div className="text-xs text-muted-foreground">
-            Connect Spotify in your profile to get personalized recommendations.
+            Connect Spotify in your profile to get personalized playlist recommendations.
           </div>
         )}
       </div>
