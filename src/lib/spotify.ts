@@ -43,6 +43,13 @@ export interface SpotifyPlaylist {
   external_urls: {
     spotify: string;
   };
+  images: Array<{ url: string; width: number; height: number }>;
+  tracks: {
+    total: number;
+  };
+  owner: {
+    display_name: string;
+  };
 }
 
 // Generate Spotify authorization URL with PKCE
