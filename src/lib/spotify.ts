@@ -252,6 +252,34 @@ export const getEmotionAudioFeatures = (emotion: string) => {
   }
 };
 
+// Map emotion to genre for playlist search
+export const getEmotionGenre = (emotion: string): string => {
+  switch (emotion.toLowerCase()) {
+    case 'happy': return 'pop';
+    case 'sad': return 'acoustic';
+    case 'angry': return 'rock';
+    case 'calm': return 'ambient';
+    case 'excited': return 'electronic';
+    case 'neutral':
+    default: return 'chill';
+  }
+};
+
+// Search for playlists by genre/emotion
+export const searchPlaylists = async (
+  accessToken: string,
+  query: string,
+  limit: number = 20
+): Promise<{ playlists: { items: SpotifyPlaylist[] } }> => {
+  const params = new URLSearchParams({
+    q: query,
+    type: 'playlist',
+    limit: limit.toString()
+  });
+
+  return spotifyApiRequest(`/search?${params.toString()}`, accessToken);
+};
+
 // Generate random string for OAuth state and PKCE
 function generateRandomString(length: number): string {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
