@@ -134,14 +134,23 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     }
   }, [emotion, user]);
 
+  // Helper function to get genres for emotions
   const getGenresForEmotion = (emotion: string): string[] => {
     switch (emotion.toLowerCase()) {
-      case 'happy': return ['pop', 'dance', 'funk'];
-      case 'sad': return ['blues', 'indie', 'acoustic'];
-      case 'angry': return ['rock', 'metal', 'punk'];
-      case 'calm': return ['ambient', 'classical', 'chill'];
-      case 'excited': return ['electronic', 'pop', 'dance'];
-      default: return ['pop', 'indie', 'alternative'];
+      case 'happy':
+        return ['pop', 'happy', 'summer'];
+      case 'sad':
+        return ['sad', 'acoustic', 'rainy-day'];
+      case 'angry':
+        return ['rock', 'metal', 'punk-rock'];
+      case 'calm':
+        return ['ambient', 'chill', 'sleep'];
+      case 'excited':
+        return ['dance', 'electronic', 'party'];
+      case 'surprised':
+          return ['pop', 'indie-pop', 'synth-pop'];
+      default:
+        return ['pop', 'indie', 'alt-rock'];
     }
   };
 
