@@ -139,8 +139,11 @@ export const spotifyApiRequest = async (
     throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  // Handle responses that might not have a JSON body
+  const text = await response.text();
+  return text ? JSON.parse(text) : {};
 };
+
 
 // Get current user profile
 export const getSpotifyProfile = async (accessToken: string): Promise<SpotifyUser> => {
