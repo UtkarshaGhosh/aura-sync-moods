@@ -157,34 +157,46 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
   const getSpotifyPlaylists = async (accessToken: string) => {
     const genre = getEmotionGenre(emotion);
-    const searchQuery = `${genre} ${emotion}`;
 
-    console.log(`🎵 Searching Spotify for: "${searchQuery}"`);
+    // Try multiple search strategies for better results
+    const searchQueries = [
+      `${genre} ${emotion}`,
+      `${emotion} music`,
+      `${genre} playlist`,
+      emotion
+    ];
 
-    try {
-      const response = await searchPlaylists(accessToken, searchQuery, 20);
-      console.log('🎵 Spotify search response:', response);
+    console.log(`🎵 Trying multiple search strategies for emotion: ${emotion}`);
 
-      if (!response.playlists || !response.playlists.items) {
-        console.warn('🎵 No playlists in response:', response);
-        return [];
+    for (const searchQuery of searchQueries) {
+      try {
+        console.log(`🎵 Searching Spotify for: "${searchQuery}"`);
+        const response = await searchPlaylists(accessToken, searchQuery, 20);
+        console.log(`🎵 Search "${searchQuery}" returned:`, response);
+
+        if (response.playlists && response.playlists.items && response.playlists.items.length > 0) {
+          console.log(`🎵 Found ${response.playlists.items.length} playlists with query: "${searchQuery}"`);
+
+          return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
+            id: playlist.id,
+            name: playlist.name,
+            description: playlist.description || `Curated ${emotion} playlist`,
+            image: playlist.images[0]?.url || '/placeholder.svg',
+            trackCount: playlist.tracks.total,
+            owner: playlist.owner.display_name,
+            spotifyUrl: playlist.external_urls.spotify
+          }));
+        } else {
+          console.log(`🎵 No results for query: "${searchQuery}"`);
+        }
+      } catch (error) {
+        console.error(`🎵 Error searching for "${searchQuery}":`, error);
+        // Continue to next search query
       }
-
-      console.log(`🎵 Found ${response.playlists.items.length} playlists`);
-
-      return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
-        id: playlist.id,
-        name: playlist.name,
-        description: playlist.description || `Curated ${emotion} playlist`,
-        image: playlist.images[0]?.url || '/placeholder.svg',
-        trackCount: playlist.tracks.total,
-        owner: playlist.owner.display_name,
-        spotifyUrl: playlist.external_urls.spotify
-      }));
-    } catch (error) {
-      console.error('🎵 Error in getSpotifyPlaylists:', error);
-      throw error;
     }
+
+    console.warn('🎵 No playlists found with any search strategy');
+    return [];
   };
 
   const generatePlaylists = useCallback(async () => {
