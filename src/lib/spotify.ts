@@ -3,7 +3,47 @@
 const SPOTIFY_CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const SPOTIFY_REDIRECT_URI = `${window.location.origin}/auth/spotify/callback`;
 
-// ... (keep all the interfaces: SpotifyUser, SpotifyTrack, SpotifyPlaylist)
+// Spotify OAuth scopes needed for the app
+const SCOPES = [
+  'user-read-email',
+  'user-read-private',
+  'playlist-modify-public',
+  'playlist-modify-private',
+  'user-library-modify',
+  'user-library-read',
+  'user-read-playback-state',
+  'user-modify-playback-state',
+].join(' ');
+
+export interface SpotifyUser {
+  id: string;
+  display_name: string;
+  email: string;
+  images: Array<{ url: string; width: number; height: number }>;
+}
+
+export interface SpotifyTrack {
+  id: string;
+  name: string;
+  artists: Array<{ name: string; id: string }>;
+  album: {
+    name: string;
+    images: Array<{ url: string; width: number; height: number }>;
+  };
+  preview_url: string | null;
+  external_urls: {
+    spotify: string;
+  };
+}
+
+export interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  description: string;
+  external_urls: {
+    spotify: string;
+  };
+}
 
 // Generate Spotify authorization URL with PKCE
 export const getSpotifyAuthUrl = async (): Promise<string> => {
@@ -88,10 +128,10 @@ export const refreshSpotifyToken = async (refreshToken: string) => {
     const tokenData = await response.json();
     return {
         access_token: tokenData.access_token,
-        // Spotify may optionally return a new refresh token
         refresh_token: tokenData.refresh_token || refreshToken,
     };
 };
+
 
 // Make authenticated request to Spotify API
 export const spotifyApiRequest = async (
@@ -115,9 +155,124 @@ export const spotifyApiRequest = async (
     throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
   }
   
-  // Handle responses that might not have a JSON body (e.g., 204 No Content)
   const text = await response.text();
   return text ? JSON.parse(text) : {};
 };
 
-// ... (keep the rest of the file exactly as it is)
+
+// Get current user profile
+export const getSpotifyProfile = async (accessToken: string): Promise<SpotifyUser> => {
+  return spotifyApiRequest('/me', accessToken);
+};
+
+// Get recommendations based on seed data
+export const getRecommendations = async (
+  accessToken: string,
+  options: {
+    seedGenres?: string[];
+    seedTracks?: string[];
+    seedArtists?: string[];
+    targetValence?: number;
+    targetEnergy?: number;
+    limit?: number;
+  }
+): Promise<{ tracks: SpotifyTrack[] }> => {
+  const params = new URLSearchParams();
+
+  if (options.seedGenres?.length) {
+    params.append('seed_genres', options.seedGenres.join(','));
+  }
+  if (options.seedTracks?.length) {
+    params.append('seed_tracks', options.seedTracks.join(','));
+  }
+  if (options.seedArtists?.length) {
+    params.append('seed_artists', options.seedArtists.join(','));
+  }
+  if (options.targetValence !== undefined) {
+    params.append('target_valence', options.targetValence.toString());
+  }
+  if (options.targetEnergy !== undefined) {
+    params.append('target_energy', options.targetEnergy.toString());
+  }
+  if (options.limit) {
+    params.append('limit', options.limit.toString());
+  }
+
+  return spotifyApiRequest(`/recommendations?${params.toString()}`, accessToken);
+};
+
+// Create a new playlist
+export const createPlaylist = async (
+  userId: string,
+  name: string,
+  description: string,
+  accessToken: string
+): Promise<SpotifyPlaylist> => {
+  return spotifyApiRequest(`/users/${userId}/playlists`, accessToken, {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      description,
+      public: false,
+    }),
+  });
+};
+
+// Add tracks to playlist
+export const addTracksToPlaylist = async (
+  playlistId: string,
+  trackUris: string[],
+  accessToken: string
+): Promise<{ snapshot_id: string }> => {
+  return spotifyApiRequest(`/playlists/${playlistId}/tracks`, accessToken, {
+    method: 'POST',
+    body: JSON.stringify({
+      uris: trackUris,
+    }),
+  });
+};
+
+// Map emotion to Spotify audio features
+export const getEmotionAudioFeatures = (emotion: string) => {
+  switch (emotion.toLowerCase()) {
+    case 'happy': return { targetValence: 0.8, targetEnergy: 0.7 };
+    case 'sad': return { targetValence: 0.2, targetEnergy: 0.3 };
+    case 'angry': return { targetValence: 0.1, targetEnergy: 0.9 };
+    case 'calm': return { targetValence: 0.6, targetEnergy: 0.2 };
+    case 'excited': return { targetValence: 0.9, targetEnergy: 0.9 };
+    case 'neutral':
+    default: return { targetValence: 0.5, targetEnergy: 0.5 };
+  }
+};
+
+// Generate random string for OAuth state and PKCE
+function generateRandomString(length: number): string {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  let text = '';
+  for (let i = 0; i < length; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}
+
+// Generate PKCE code challenge
+async function generateCodeChallenge(codeVerifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(codeVerifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+// Convert track data to our app format
+export const convertSpotifyTrack = (spotifyTrack: SpotifyTrack) => ({
+  id: spotifyTrack.id,
+  name: spotifyTrack.name,
+  artist: spotifyTrack.artists.map(artist => artist.name).join(', '),
+  album: spotifyTrack.album.name,
+  image: spotifyTrack.album.images[0]?.url || '/placeholder.svg',
+  preview_url: spotifyTrack.preview_url,
+  spotify_url: spotifyTrack.external_urls.spotify,
+});
