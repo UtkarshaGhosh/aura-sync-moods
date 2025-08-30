@@ -173,12 +173,12 @@ const SpotifyCallback: React.FC = () => {
                   </Alert>
                 )}
                 <div className="pt-4">
-                  <a
-                    href="/profile"
+                  <button
+                    onClick={() => navigate('/profile', { replace: true })}
                     className="text-primary hover:text-primary/80 underline"
                   >
                     Return to Profile
-                  </a>
+                  </button>
                 </div>
               </>
             )}
