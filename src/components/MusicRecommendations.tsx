@@ -155,27 +155,101 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     }
   };
 
+  const getRealisticSearchTerms = (emotion: string): string[] => {
+    switch (emotion.toLowerCase()) {
+      case 'happy':
+        return [
+          'feel good hits',
+          'good vibes',
+          'upbeat pop',
+          'positive energy',
+          'happy songs',
+          'mood booster',
+          'feel good music'
+        ];
+
+      case 'sad':
+        return [
+          'sad songs',
+          'emotional ballads',
+          'heartbreak',
+          'melancholy',
+          'crying songs',
+          'depressing music',
+          'sad indie'
+        ];
+
+      case 'angry':
+        return [
+          'aggressive music',
+          'heavy metal',
+          'hard rock',
+          'metal workout',
+          'angry music',
+          'intense rock',
+          'rage playlist'
+        ];
+
+      case 'calm':
+        return [
+          'chill music',
+          'relaxing playlist',
+          'peaceful music',
+          'ambient chill',
+          'calm vibes',
+          'meditation music',
+          'soft music'
+        ];
+
+      case 'surprised':
+        return [
+          'high energy',
+          'pump up music',
+          'energetic hits',
+          'adrenaline rush',
+          'intense beats',
+          'upbeat electronic',
+          'energy boost'
+        ];
+
+      case 'excited':
+        return [
+          'pump up',
+          'high energy',
+          'party music',
+          'energetic pop',
+          'workout beats',
+          'hype music',
+          'dance hits'
+        ];
+
+      case 'neutral':
+      default:
+        return [
+          'indie hits',
+          'alternative music',
+          'chill indie',
+          'mellow music',
+          'background music',
+          'indie pop',
+          'casual listening'
+        ];
+    }
+  };
+
   const getSpotifyPlaylists = async (accessToken: string) => {
-    const genre = getEmotionGenre(emotion);
+    const searchTerms = getRealisticSearchTerms(emotion);
 
-    // Try multiple search strategies for better results
-    const searchQueries = [
-      `${genre} ${emotion}`,
-      `${emotion} music`,
-      `${genre} playlist`,
-      emotion
-    ];
+    console.log(`🎵 Searching for ${emotion} mood with realistic terms:`, searchTerms);
 
-    console.log(`🎵 Trying multiple search strategies for emotion: ${emotion}`);
-
-    for (const searchQuery of searchQueries) {
+    for (const searchQuery of searchTerms) {
       try {
         console.log(`🎵 Searching Spotify for: "${searchQuery}"`);
         const response = await searchPlaylists(accessToken, searchQuery, 20);
-        console.log(`🎵 Search "${searchQuery}" returned:`, response);
+        console.log(`🎵 Search "${searchQuery}" returned ${response.playlists?.items?.length || 0} playlists`);
 
         if (response.playlists && response.playlists.items && response.playlists.items.length > 0) {
-          console.log(`🎵 Found ${response.playlists.items.length} playlists with query: "${searchQuery}"`);
+          console.log(`🎵 ✅ Success! Found ${response.playlists.items.length} playlists with: "${searchQuery}"`);
 
           return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
             id: playlist.id,
@@ -187,15 +261,15 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             spotifyUrl: playlist.external_urls.spotify
           }));
         } else {
-          console.log(`🎵 No results for query: "${searchQuery}"`);
+          console.log(`🎵 ❌ No results for: "${searchQuery}"`);
         }
       } catch (error) {
-        console.error(`🎵 Error searching for "${searchQuery}":`, error);
+        console.error(`🎵 💥 Error searching for "${searchQuery}":`, error);
         // Continue to next search query
       }
     }
 
-    console.warn('🎵 No playlists found with any search strategy');
+    console.warn('🎵 ⚠️ No playlists found with any realistic search terms');
     return [];
   };
 
