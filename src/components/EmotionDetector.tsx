@@ -128,7 +128,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       if (!envInfo.isSecure) {
         addDebugLog('⚠️ Not on secure connection - camera access blocked');
-        setError(`Camera access requires HTTPS. You're currently on ${location.protocol}//. Please use a secure connection or run on localhost for development.`);
+        setError('Camera access requires HTTPS.');
         setIsLoading(false);
         return;
       }
@@ -614,7 +614,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                 muted
                 className={`w-full h-full object-cover ${isWebcamActive ? 'block' : 'hidden'}`}
                 onError={(e) => {
-                  addDebugLog(`��� Video error event: ${e.type}`);
+                  addDebugLog(`❌ Video error event: ${e.type}`);
                   setError('Video playback failed');
                 }}
               />
