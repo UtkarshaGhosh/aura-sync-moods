@@ -157,27 +157,56 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
   const getSpotifyPlaylists = async (accessToken: string) => {
     const genre = getEmotionGenre(emotion);
-    const searchQuery = `${genre} ${emotion}`;
-    
-    const response = await searchPlaylists(accessToken, searchQuery, 20);
-    
-    return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
-      id: playlist.id,
-      name: playlist.name,
-      description: playlist.description || `Curated ${emotion} playlist`,
-      image: playlist.images[0]?.url || '/placeholder.svg',
-      trackCount: playlist.tracks.total,
-      owner: playlist.owner.display_name,
-      spotifyUrl: playlist.external_urls.spotify
-    }));
+
+    // Try multiple search strategies for better results
+    const searchQueries = [
+      `${genre} ${emotion}`,
+      `${emotion} music`,
+      `${genre} playlist`,
+      emotion
+    ];
+
+    console.log(`🎵 Trying multiple search strategies for emotion: ${emotion}`);
+
+    for (const searchQuery of searchQueries) {
+      try {
+        console.log(`🎵 Searching Spotify for: "${searchQuery}"`);
+        const response = await searchPlaylists(accessToken, searchQuery, 20);
+        console.log(`🎵 Search "${searchQuery}" returned:`, response);
+
+        if (response.playlists && response.playlists.items && response.playlists.items.length > 0) {
+          console.log(`🎵 Found ${response.playlists.items.length} playlists with query: "${searchQuery}"`);
+
+          return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
+            id: playlist.id,
+            name: playlist.name,
+            description: playlist.description || `Curated ${emotion} playlist`,
+            image: playlist.images[0]?.url || '/placeholder.svg',
+            trackCount: playlist.tracks.total,
+            owner: playlist.owner.display_name,
+            spotifyUrl: playlist.external_urls.spotify
+          }));
+        } else {
+          console.log(`🎵 No results for query: "${searchQuery}"`);
+        }
+      } catch (error) {
+        console.error(`🎵 Error searching for "${searchQuery}":`, error);
+        // Continue to next search query
+      }
+    }
+
+    console.warn('🎵 No playlists found with any search strategy');
+    return [];
   };
 
   const generatePlaylists = useCallback(async () => {
+    console.log(`🎵 Starting playlist generation for emotion: ${emotion}`);
     setIsGenerating(true);
     setPlaylists([]);
     setSelectedPlaylist(null);
 
     if (!user) {
+      console.log('🎵 No user found, using mock playlists');
       const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
       setPlaylists(fallback);
       setIsGenerating(false);
@@ -185,13 +214,23 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     }
 
     try {
+      console.log('🎵 Fetching Spotify profile data...');
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('access_token, refresh_token, spotify_user_id')
         .eq('id', user.id)
         .single();
 
+      console.log('🎵 Profile data:', {
+        hasProfile: !!profile,
+        hasAccessToken: !!profile?.access_token,
+        hasRefreshToken: !!profile?.refresh_token,
+        hasSpotifyUserId: !!profile?.spotify_user_id,
+        error: profileError
+      });
+
       if (profileError || !profile?.access_token) {
+        console.log('🎵 No Spotify credentials found, using mock playlists');
         setIsSpotifyConnected(false);
         const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
         setPlaylists(fallback);
@@ -201,19 +240,24 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         return;
       }
 
+      console.log('🎵 Spotify credentials found, setting as connected');
       setIsSpotifyConnected(true);
       let currentAccessToken = profile.access_token as string;
 
       try {
+        console.log('🎵 Fetching Spotify playlists...');
         const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
+        console.log(`🎵 Got ${newPlaylists.length} playlists from Spotify`);
         setPlaylists(newPlaylists);
         insertPlaylistSuggestions(newPlaylists);
-        
+
         if (newPlaylists.length > 0) {
+          console.log('🎵 Successfully showing Spotify playlists');
           toast.success(`Found ${emotion} playlists!`, {
             description: `Discovered ${newPlaylists.length} playlists matching your mood.`
           });
         } else {
+          console.log('🎵 No Spotify playlists found, showing fallback');
           const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
           setPlaylists(fallback);
           toast.info(`No Spotify playlists found for ${emotion}`, {
@@ -221,7 +265,9 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
           });
         }
       } catch (error: any) {
+        console.error('🎵 Error in Spotify playlist fetch:', error);
         if (error instanceof Error && error.message === 'SPOTIFY_TOKEN_EXPIRED' && profile?.refresh_token) {
+          console.log('🎵 Token expired, attempting refresh...');
           toast.info('Spotify token expired. Refreshing automatically...');
           try {
             const newTokens = await refreshSpotifyToken(profile.refresh_token);
@@ -231,6 +277,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
               .eq('id', user.id);
 
             currentAccessToken = newTokens.access_token;
+            console.log('🎵 Token refreshed, retrying playlist fetch...');
             const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
             setPlaylists(newPlaylists);
             insertPlaylistSuggestions(newPlaylists);
@@ -238,7 +285,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
               description: 'Here are your new playlist recommendations.'
             });
           } catch (refreshError) {
-            console.error('Failed to refresh Spotify token:', refreshError);
+            console.error('🎵 Failed to refresh Spotify token:', refreshError);
             setIsSpotifyConnected(false);
             const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
             setPlaylists(fallback);
@@ -247,11 +294,12 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             });
           }
         } else {
+          console.error('🎵 Non-token error:', error);
           throw error;
         }
       }
     } catch (error) {
-      console.error('Error generating playlists:', error);
+      console.error('🎵 Fatal error generating playlists:', error);
       toast.error('Failed to generate playlist recommendations.');
       const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
       setPlaylists(fallback);
