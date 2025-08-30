@@ -253,7 +253,9 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
           });
         }
       } catch (error: any) {
+        console.error('🎵 Error in Spotify playlist fetch:', error);
         if (error instanceof Error && error.message === 'SPOTIFY_TOKEN_EXPIRED' && profile?.refresh_token) {
+          console.log('🎵 Token expired, attempting refresh...');
           toast.info('Spotify token expired. Refreshing automatically...');
           try {
             const newTokens = await refreshSpotifyToken(profile.refresh_token);
@@ -263,6 +265,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
               .eq('id', user.id);
 
             currentAccessToken = newTokens.access_token;
+            console.log('🎵 Token refreshed, retrying playlist fetch...');
             const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
             setPlaylists(newPlaylists);
             insertPlaylistSuggestions(newPlaylists);
@@ -270,7 +273,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
               description: 'Here are your new playlist recommendations.'
             });
           } catch (refreshError) {
-            console.error('Failed to refresh Spotify token:', refreshError);
+            console.error('🎵 Failed to refresh Spotify token:', refreshError);
             setIsSpotifyConnected(false);
             const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
             setPlaylists(fallback);
@@ -279,11 +282,12 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             });
           }
         } else {
+          console.error('🎵 Non-token error:', error);
           throw error;
         }
       }
     } catch (error) {
-      console.error('Error generating playlists:', error);
+      console.error('🎵 Fatal error generating playlists:', error);
       toast.error('Failed to generate playlist recommendations.');
       const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
       setPlaylists(fallback);
