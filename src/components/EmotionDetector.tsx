@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, HelpCircle, ChevronDown } from 'lucide-react';
+import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as faceapi from 'face-api.js';
 
@@ -34,7 +33,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isModelLoading, setIsModelLoading] = useState(false);
   
   // UI state
-  const [showHelp, setShowHelp] = useState(false);
   const [emotionChanged, setEmotionChanged] = useState(false);
   const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
 
@@ -130,7 +128,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       if (!envInfo.isSecure) {
         addDebugLog('⚠️ Not on secure connection - camera access blocked');
-        setError(`Camera access requires HTTPS. You're currently on ${location.protocol}//. Please use a secure connection or run on localhost for development.`);
+        setError('Camera access requires HTTPS.');
         setIsLoading(false);
         return;
       }
@@ -139,7 +137,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       const permissionStatus = await checkCameraPermission();
       if (permissionStatus === 'denied') {
         addDebugLog('❌ Camera permission explicitly denied');
-        setError('Camera access is blocked. Click the camera icon in your browser\'s address bar, select "Allow", then refresh and try again.');
+        setError('Camera access is blocked.');
         setIsLoading(false);
         return;
       }
@@ -270,17 +268,17 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       if (error instanceof Error) {
         addDebugLog(`Error details: ${error.name} - ${error.message}`);
         if (error.name === 'NotAllowedError') {
-          errorMessage = 'Camera permission denied. Click the camera icon in your browser\'s address bar to allow access, then try again.';
+          errorMessage = 'Camera permission denied.';
         } else if (error.name === 'NotFoundError') {
-          errorMessage = 'No camera found. Please connect a camera and try again.';
+          errorMessage = 'No camera found.';
         } else if (error.name === 'NotReadableError') {
-          errorMessage = 'Camera is in use by another application. Close other apps using the camera and try again.';
+          errorMessage = 'Camera is in use by another application.';
         } else if (error.name === 'AbortError') {
-          errorMessage = 'Camera access was interrupted. Please try again.';
+          errorMessage = 'Camera access was interrupted.';
         } else if (error.message.includes('Video failed to load')) {
-          errorMessage = 'Video playback failed. Try refreshing the page.';
+          errorMessage = 'Video playback failed.';
         } else if (error.message.includes('getUserMedia not supported')) {
-          errorMessage = 'Camera not supported in this browser. Try using Chrome, Firefox, or Safari.';
+          errorMessage = 'Camera not supported in this browser.';
         }
       }
 
@@ -597,13 +595,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-glow">AI Emotion Detection</h3>
 
-          {/* Camera Requirements Info */}
-          {!isWebcamActive && !error && (
-            <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-              <p className="text-sm text-blue-400 mb-2">📹 Camera access required for AI emotion detection</p>
-              <p className="text-xs text-blue-300">Your browser will ask for permission to use your camera. Please click "Allow" to continue.</p>
-            </div>
-          )}
 
           {/* Model Loading Status */}
           {isModelLoading && (
@@ -763,28 +754,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           </div>
           
 
-          {/* Help Section */}
-          <Collapsible open={showHelp} onOpenChange={setShowHelp}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
-                <HelpCircle className="w-3 h-3 mr-2" />
-                Camera troubleshooting help
-                <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mt-2">
-              <div className="text-xs space-y-3 bg-muted/30 rounded p-3">
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">If camera access is blocked:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground/80">
-                    <li>Look for a camera icon in your browser's address bar</li>
-                    <li>Click it and change from "Block" to "Allow"</li>
-                    <li>Refresh the page and try again</li>
-                  </ol>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
         </div>
 
         {/* Manual Emotion Selection */}

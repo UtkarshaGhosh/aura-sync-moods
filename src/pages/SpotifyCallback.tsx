@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,16 +10,29 @@ import { supabase } from '@/integrations/supabase/client';
 import { exchangeCodeForTokens, getSpotifyProfile } from '@/lib/spotify';
 
 const SpotifyCallback: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [hasProcessed, setHasProcessed] = useState(false);
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Prevent reprocessing if we've already handled this callback
+      if (hasProcessed) {
+        return;
+      }
+
       const code = searchParams.get('code');
       const state = searchParams.get('state');
       const error = searchParams.get('error');
+
+      // If no parameters, user probably navigated back - redirect to profile
+      if (!code && !state && !error) {
+        navigate('/profile', { replace: true });
+        return;
+      }
 
       if (error) {
         setStatus('error');
@@ -26,12 +40,16 @@ const SpotifyCallback: React.FC = () => {
         toast.error('Spotify connection failed', {
           description: error,
         });
+        // Clear URL parameters after error
+        setSearchParams({}, { replace: true });
         return;
       }
 
       if (!code || !state) {
         setStatus('error');
         setErrorMessage('Missing authorization code or state parameter');
+        // Clear URL parameters after error
+        setSearchParams({}, { replace: true });
         return;
       }
 
@@ -43,6 +61,8 @@ const SpotifyCallback: React.FC = () => {
       }
 
       try {
+        setHasProcessed(true); // Mark as processing to prevent rerun
+
         // Exchange authorization code for tokens using PKCE
         const tokenData = await exchangeCodeForTokens(code, state);
 
@@ -68,9 +88,10 @@ const SpotifyCallback: React.FC = () => {
           description: 'You can now save playlists and get personalized recommendations.',
         });
 
-        // Redirect to profile page after a short delay
+        // Clear URL parameters and redirect to profile page
+        setSearchParams({}, { replace: true });
         setTimeout(() => {
-          window.location.href = '/profile';
+          navigate('/profile', { replace: true });
         }, 2000);
 
       } catch (error) {
@@ -80,6 +101,8 @@ const SpotifyCallback: React.FC = () => {
         toast.error('Failed to connect Spotify', {
           description: error instanceof Error ? error.message : 'Unknown error',
         });
+        // Clear URL parameters after error
+        setSearchParams({}, { replace: true });
       }
     };
 
@@ -87,7 +110,7 @@ const SpotifyCallback: React.FC = () => {
     if (user) {
         handleCallback();
     }
-  }, [searchParams, user]); // Added user to the dependency array
+  }, [searchParams, user, navigate, setSearchParams, hasProcessed]); // Added dependencies
 
   if (!isAuthenticated && status !== 'processing') {
     return <Navigate to="/auth" replace />;
@@ -151,12 +174,12 @@ const SpotifyCallback: React.FC = () => {
                   </Alert>
                 )}
                 <div className="pt-4">
-                  <a
-                    href="/profile"
-                    className="text-primary hover:text-primary/80 underline"
+                  <Button
+                    onClick={() => navigate('/profile', { replace: true })}
+                    variant="outline"
                   >
                     Return to Profile
-                  </a>
+                  </Button>
                 </div>
               </>
             )}
