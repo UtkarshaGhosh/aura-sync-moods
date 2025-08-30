@@ -33,7 +33,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isModelLoading, setIsModelLoading] = useState(false);
   
   // UI state
-  const [showHelp, setShowHelp] = useState(false);
   const [emotionChanged, setEmotionChanged] = useState(false);
   const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
 
