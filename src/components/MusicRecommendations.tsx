@@ -188,11 +188,13 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   };
 
   const generatePlaylists = useCallback(async () => {
+    console.log(`🎵 Starting playlist generation for emotion: ${emotion}`);
     setIsGenerating(true);
     setPlaylists([]);
     setSelectedPlaylist(null);
 
     if (!user) {
+      console.log('🎵 No user found, using mock playlists');
       const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
       setPlaylists(fallback);
       setIsGenerating(false);
@@ -200,13 +202,23 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     }
 
     try {
+      console.log('🎵 Fetching Spotify profile data...');
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('access_token, refresh_token, spotify_user_id')
         .eq('id', user.id)
         .single();
 
+      console.log('🎵 Profile data:', {
+        hasProfile: !!profile,
+        hasAccessToken: !!profile?.access_token,
+        hasRefreshToken: !!profile?.refresh_token,
+        hasSpotifyUserId: !!profile?.spotify_user_id,
+        error: profileError
+      });
+
       if (profileError || !profile?.access_token) {
+        console.log('🎵 No Spotify credentials found, using mock playlists');
         setIsSpotifyConnected(false);
         const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
         setPlaylists(fallback);
@@ -216,19 +228,24 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         return;
       }
 
+      console.log('🎵 Spotify credentials found, setting as connected');
       setIsSpotifyConnected(true);
       let currentAccessToken = profile.access_token as string;
 
       try {
+        console.log('🎵 Fetching Spotify playlists...');
         const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
+        console.log(`🎵 Got ${newPlaylists.length} playlists from Spotify`);
         setPlaylists(newPlaylists);
         insertPlaylistSuggestions(newPlaylists);
-        
+
         if (newPlaylists.length > 0) {
+          console.log('🎵 Successfully showing Spotify playlists');
           toast.success(`Found ${emotion} playlists!`, {
             description: `Discovered ${newPlaylists.length} playlists matching your mood.`
           });
         } else {
+          console.log('🎵 No Spotify playlists found, showing fallback');
           const fallback = mockPlaylists[emotion] || mockPlaylists.neutral;
           setPlaylists(fallback);
           toast.info(`No Spotify playlists found for ${emotion}`, {
