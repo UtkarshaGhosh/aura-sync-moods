@@ -117,6 +117,34 @@ export const exchangeCodeForTokens = async (code: string, state: string) => {
   };
 };
 
+// NEW: Function to refresh the access token
+export const refreshSpotifyToken = async (refreshToken: string) => {
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: SPOTIFY_CLIENT_ID!,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Token refresh failed: ${errorData.error_description || response.statusText}`);
+    }
+    
+    const tokenData = await response.json();
+    return {
+        access_token: tokenData.access_token,
+        // Spotify may optionally return a new refresh token
+        refresh_token: tokenData.refresh_token || refreshToken,
+    };
+};
+
+
 // Make authenticated request to Spotify API
 export const spotifyApiRequest = async (
   endpoint: string,
@@ -138,8 +166,8 @@ export const spotifyApiRequest = async (
     }
     throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
   }
-
-  // Handle responses that might not have a JSON body
+  
+  // Handle responses that might not have a JSON body (e.g., 204 No Content)
   const text = await response.text();
   return text ? JSON.parse(text) : {};
 };
@@ -150,21 +178,7 @@ export const getSpotifyProfile = async (accessToken: string): Promise<SpotifyUse
   return spotifyApiRequest('/me', accessToken);
 };
 
-// Search for tracks
-export const searchTracks = async (
-  query: string,
-  accessToken: string,
-  limit: number = 20
-): Promise<{ tracks: { items: SpotifyTrack[] } }> => {
-  const params = new URLSearchParams({
-    q: query,
-    type: 'track',
-    limit: limit.toString(),
-    market: 'US',
-  });
-
-  return spotifyApiRequest(`/search?${params.toString()}`, accessToken);
-};
+// ... (keep the rest of the functions as they are)
 
 // Get recommendations based on seed data
 export const getRecommendations = async (
@@ -236,19 +250,13 @@ export const addTracksToPlaylist = async (
 // Map emotion to Spotify audio features
 export const getEmotionAudioFeatures = (emotion: string) => {
   switch (emotion.toLowerCase()) {
-    case 'happy':
-      return { targetValence: 0.8, targetEnergy: 0.7 };
-    case 'sad':
-      return { targetValence: 0.2, targetEnergy: 0.3 };
-    case 'angry':
-      return { targetValence: 0.1, targetEnergy: 0.9 };
-    case 'calm':
-      return { targetValence: 0.6, targetEnergy: 0.2 };
-    case 'excited':
-      return { targetValence: 0.9, targetEnergy: 0.9 };
+    case 'happy': return { targetValence: 0.8, targetEnergy: 0.7 };
+    case 'sad': return { targetValence: 0.2, targetEnergy: 0.3 };
+    case 'angry': return { targetValence: 0.1, targetEnergy: 0.9 };
+    case 'calm': return { targetValence: 0.6, targetEnergy: 0.2 };
+    case 'excited': return { targetValence: 0.9, targetEnergy: 0.9 };
     case 'neutral':
-    default:
-      return { targetValence: 0.5, targetEnergy: 0.5 };
+    default: return { targetValence: 0.5, targetEnergy: 0.5 };
   }
 };
 
