@@ -137,7 +137,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       const permissionStatus = await checkCameraPermission();
       if (permissionStatus === 'denied') {
         addDebugLog('❌ Camera permission explicitly denied');
-        setError('Camera access is blocked. Click the camera icon in your browser\'s address bar, select "Allow", then refresh and try again.');
+        setError('Camera access is blocked.');
         setIsLoading(false);
         return;
       }
@@ -614,7 +614,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                 muted
                 className={`w-full h-full object-cover ${isWebcamActive ? 'block' : 'hidden'}`}
                 onError={(e) => {
-                  addDebugLog(`❌ Video error event: ${e.type}`);
+                  addDebugLog(`��� Video error event: ${e.type}`);
                   setError('Video playback failed');
                 }}
               />
