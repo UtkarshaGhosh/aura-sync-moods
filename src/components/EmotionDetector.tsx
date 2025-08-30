@@ -756,28 +756,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
           </div>
           
 
-          {/* Help Section */}
-          <Collapsible open={showHelp} onOpenChange={setShowHelp}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
-                <HelpCircle className="w-3 h-3 mr-2" />
-                Camera troubleshooting help
-                <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mt-2">
-              <div className="text-xs space-y-3 bg-muted/30 rounded p-3">
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">If camera access is blocked:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground/80">
-                    <li>Look for a camera icon in your browser's address bar</li>
-                    <li>Click it and change from "Block" to "Allow"</li>
-                    <li>Refresh the page and try again</li>
-                  </ol>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
         </div>
 
         {/* Manual Emotion Selection */}
