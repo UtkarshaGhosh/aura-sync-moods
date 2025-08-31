@@ -11,7 +11,8 @@ import {
   searchPlaylists,
   getEmotionGenre,
   refreshSpotifyToken,
-  SpotifyPlaylist
+  SpotifyPlaylist,
+  isSpotifyPremium
 } from '@/lib/spotify';
 
 export interface Track {
