@@ -264,7 +264,7 @@ const Index = () => {
       <header className="relative z-10 p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-accent" />
+            <img src="https://i.ibb.co/4nDnvPR0/1.png" alt="AuraSync logo" className="w-8 h-8 rounded-full object-cover" />
             <h1 className="text-2xl font-bold text-glow">AuraSync</h1>
           </div>
 
