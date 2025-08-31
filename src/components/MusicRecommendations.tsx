@@ -492,11 +492,22 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isGenerating} className="order-last sm:order-none">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isGenerating}
+              className="order-last sm:order-none rounded-full border-border/60 bg-muted/20 hover:bg-muted/30 shadow-sm transition-all"
+            >
               <Shuffle className="w-4 h-4 mr-2" />
               {isGenerating ? 'Finding...' : 'Refresh'}
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!isSpotifyConnected || playlists.length === 0} className="bg-primary text-primary-foreground">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={!isSpotifyConnected || playlists.length === 0}
+              className="rounded-full px-5 bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all"
+            >
               <Save className="w-4 h-4 mr-2" />
               Save
             </Button>
