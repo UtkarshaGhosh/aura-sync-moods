@@ -478,7 +478,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             <div className="flex items-center gap-2">
               <span className="hidden sm:inline text-xs text-muted-foreground">Language</span>
               <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
-                <SelectTrigger className="w-40" aria-label="Language filter">
+                <SelectTrigger className="w-44 rounded-full border-transparent bg-muted/30 hover:bg-muted/40 backdrop-blur-sm shadow-sm transition-all" aria-label="Language filter">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
                 <SelectContent>
