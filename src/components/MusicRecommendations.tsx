@@ -515,8 +515,9 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={!isSpotifyConnected || playlists.length === 0}
+              disabled={!isSpotifyConnected || !isPremium || playlists.length === 0}
               className="rounded-full px-5 bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+              title={!isSpotifyConnected ? 'Connect Spotify to save' : !isPremium ? 'Spotify Premium required to save/modify playlists' : undefined}
             >
               <Save className="w-4 h-4 mr-2" />
               Save
