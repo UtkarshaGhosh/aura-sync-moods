@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Music, User, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { createPlaylist, addTracksToPlaylist } from '@/lib/spotify';
+import { createPlaylist, addTracksToPlaylist, isSpotifyPremium } from '@/lib/spotify';
 
 interface Track {
   id: string;
