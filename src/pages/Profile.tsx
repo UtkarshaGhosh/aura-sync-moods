@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ interface UserProfile {
 
 const Profile: React.FC = () => {
   const { user, loading, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -186,10 +187,10 @@ const Profile: React.FC = () => {
       <div className="container mx-auto px-6 py-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
