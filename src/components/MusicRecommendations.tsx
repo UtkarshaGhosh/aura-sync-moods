@@ -469,31 +469,34 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   return (
     <Card className={cn('glass border-border/50', className)}>
       <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <Music className="w-5 h-5 text-primary" />
             <h3 className="text-lg font-semibold">{headerText}</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
-              <SelectTrigger className="w-36" aria-label="Language filter">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Languages</SelectItem>
-                <SelectItem value="hindi">Hindi</SelectItem>
-                <SelectItem value="bengali">Bengali</SelectItem>
-                <SelectItem value="tamil">Tamil</SelectItem>
-                <SelectItem value="telugu">Telugu</SelectItem>
-                <SelectItem value="punjabi">Punjabi</SelectItem>
-                <SelectItem value="marathi">Marathi</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isGenerating}>
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-xs text-muted-foreground">Language</span>
+              <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+                <SelectTrigger className="w-40" aria-label="Language filter">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Languages</SelectItem>
+                  <SelectItem value="hindi">Hindi</SelectItem>
+                  <SelectItem value="bengali">Bengali</SelectItem>
+                  <SelectItem value="tamil">Tamil</SelectItem>
+                  <SelectItem value="telugu">Telugu</SelectItem>
+                  <SelectItem value="punjabi">Punjabi</SelectItem>
+                  <SelectItem value="marathi">Marathi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isGenerating} className="order-last sm:order-none">
               <Shuffle className="w-4 h-4 mr-2" />
               {isGenerating ? 'Finding...' : 'Refresh'}
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!isSpotifyConnected || playlists.length === 0}>
+            <Button size="sm" onClick={handleSave} disabled={!isSpotifyConnected || playlists.length === 0} className="bg-primary text-primary-foreground">
               <Save className="w-4 h-4 mr-2" />
               Save
             </Button>
