@@ -219,7 +219,7 @@ const Auth: React.FC = () => {
       
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-accent mx-auto mb-4" />
+          <img src="https://i.ibb.co/4nDnvPR0/1.png" alt="AuraSync logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-glow mb-2">AuraSync</h1>
           <p className="text-muted-foreground">Connect your emotions to music</p>
         </div>
