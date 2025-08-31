@@ -474,11 +474,11 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             <Music className="w-5 h-5 text-primary" />
             <h3 className="text-lg font-semibold">{headerText}</h3>
           </div>
-          <div className="flex flex-wrap items-center gap-2 justify-end">
-            <div className="flex items-center gap-2">
+          <div className="w-full sm:w-auto grid grid-cols-1 sm:flex sm:flex-wrap items-stretch gap-2 justify-end">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <span className="hidden sm:inline text-xs text-muted-foreground">Language</span>
               <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
-                <SelectTrigger className="w-44 rounded-full border-transparent bg-muted/30 hover:bg-muted/40 backdrop-blur-sm shadow-sm transition-all" aria-label="Language filter">
+                <SelectTrigger className="w-full sm:w-44 rounded-full border-transparent bg-muted/30 hover:bg-muted/40 backdrop-blur-sm shadow-sm transition-all" aria-label="Language filter">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
                 <SelectContent>
@@ -497,7 +497,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
               size="sm"
               onClick={handleRefresh}
               disabled={isGenerating}
-              className="order-last sm:order-none rounded-full border-border/60 bg-muted/20 hover:bg-muted/30 shadow-sm transition-all"
+              className="order-last sm:order-none rounded-full border-border/60 bg-muted/20 hover:bg-muted/30 shadow-sm transition-all w-full sm:w-auto"
             >
               <Shuffle className="w-4 h-4 mr-2" />
               {isGenerating ? 'Finding...' : 'Refresh'}
@@ -506,7 +506,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
               size="sm"
               onClick={handleSave}
               disabled={!isSpotifyConnected || playlists.length === 0}
-              className="rounded-full px-5 bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all"
+              className="rounded-full px-5 bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
             >
               <Save className="w-4 h-4 mr-2" />
               Save
