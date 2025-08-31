@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, Save, Music, Shuffle, ExternalLink, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -126,9 +127,16 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 }) => {
   const { user } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistDisplay[]>([]);
+  const [allPlaylists, setAllPlaylists] = useState<PlaylistDisplay[]>([]);
+  const [batchIndex, setBatchIndex] = useState(0);
+  const BATCH_SIZE = 5;
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistDisplay | null>(null);
+
+  const [language, setLanguage] = useState<'all' | 'hindi' | 'bengali' | 'tamil' | 'telugu' | 'punjabi' | 'marathi'>('all');
+  const market = useMemo(() => (language === 'all' ? undefined : 'IN'), [language]);
 
   const headerText = useMemo(() => `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} Playlists`, [emotion]);
 
@@ -152,6 +160,25 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       }
     } catch (e) {
       console.warn('Unexpected error saving playlist suggestions', e);
+    }
+  };
+
+  const getLanguageKeywords = (): string[] => {
+    switch (language) {
+      case 'hindi':
+        return ['hindi', 'bollywood', 'hindustani'];
+      case 'bengali':
+        return ['bengali', 'bangla'];
+      case 'tamil':
+        return ['tamil', 'kollywood'];
+      case 'telugu':
+        return ['telugu', 'tollywood'];
+      case 'punjabi':
+        return ['punjabi'];
+      case 'marathi':
+        return ['marathi'];
+      default:
+        return [];
     }
   };
 
@@ -238,14 +265,16 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
   };
 
   const getSpotifyPlaylists = async (accessToken: string) => {
-    const searchTerms = getRealisticSearchTerms(emotion);
+    const baseTerms = getRealisticSearchTerms(emotion);
+    const langTerms = getLanguageKeywords();
+    const searchTerms = baseTerms.map(term => langTerms.length ? `${langTerms[0]} ${term}` : term);
 
-    console.log(`🎵 Searching for ${emotion} mood with realistic terms:`, searchTerms);
+    console.log(`🎵 Searching for ${emotion} mood with terms:`, searchTerms, 'language:', language);
 
     for (const searchQuery of searchTerms) {
       try {
-        console.log(`🎵 Searching Spotify for: "${searchQuery}"`);
-        const response = await searchPlaylists(accessToken, searchQuery, 20);
+        console.log(`🎵 Searching Spotify for: "${searchQuery}" (market=${market || 'any'})`);
+        const response = await searchPlaylists(accessToken, searchQuery, 20, market);
         console.log(`🎵 Search "${searchQuery}" returned ${response.playlists?.items?.length || 0} playlists`);
 
         if (response.playlists && response.playlists.items && response.playlists.items.length > 0) {
@@ -280,10 +309,34 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     return [];
   };
 
+  const showBatch = (list: PlaylistDisplay[], index: number) => {
+    const start = (index * BATCH_SIZE) % Math.max(list.length, 1);
+    const end = start + BATCH_SIZE;
+    const batch = list.slice(start, end);
+    if (batch.length < BATCH_SIZE && list.length > 0) {
+      batch.push(...list.slice(0, BATCH_SIZE - batch.length));
+    }
+    setPlaylists(batch);
+    insertPlaylistSuggestions(batch);
+  };
+
+  const handleRefresh = async () => {
+    if (isGenerating) return;
+    if (allPlaylists.length > 0) {
+      const nextIndex = (batchIndex + 1) % Math.ceil(allPlaylists.length / BATCH_SIZE || 1);
+      setBatchIndex(nextIndex);
+      showBatch(allPlaylists, nextIndex);
+      return;
+    }
+    await generatePlaylists();
+  };
+
   const generatePlaylists = useCallback(async () => {
     console.log(`🎵 Starting playlist generation for emotion: ${emotion}`);
     setIsGenerating(true);
     setPlaylists([]);
+    setAllPlaylists([]);
+    setBatchIndex(0);
     setSelectedPlaylist(null);
 
     if (!user) {
@@ -329,8 +382,8 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         console.log('🎵 Fetching Spotify playlists...');
         const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
         console.log(`🎵 Got ${newPlaylists.length} playlists from Spotify`);
-        setPlaylists(newPlaylists);
-        insertPlaylistSuggestions(newPlaylists);
+        setAllPlaylists(newPlaylists);
+        showBatch(newPlaylists, 0);
 
         if (newPlaylists.length > 0) {
           console.log('🎵 Successfully showing Spotify playlists');
@@ -360,8 +413,8 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             currentAccessToken = newTokens.access_token;
             console.log('🎵 Token refreshed, retrying playlist fetch...');
             const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
-            setPlaylists(newPlaylists);
-            insertPlaylistSuggestions(newPlaylists);
+            setAllPlaylists(newPlaylists);
+            showBatch(newPlaylists, 0);
             toast.success('Spotify connection refreshed!', {
               description: 'Here are your new playlist recommendations.'
             });
@@ -387,13 +440,13 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [emotion, user, moodHistoryId]);
+  }, [emotion, user, moodHistoryId, language]);
 
   useEffect(() => {
     if (emotion) {
       generatePlaylists();
     }
-  }, [emotion, generatePlaylists]);
+  }, [emotion, language, generatePlaylists]);
 
   const handleSave = () => {
     if (playlists.length === 0) {
@@ -422,7 +475,21 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             <h3 className="text-lg font-semibold">{headerText}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={generatePlaylists} disabled={isGenerating}>
+            <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+              <SelectTrigger className="w-36" aria-label="Language filter">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Languages</SelectItem>
+                <SelectItem value="hindi">Hindi</SelectItem>
+                <SelectItem value="bengali">Bengali</SelectItem>
+                <SelectItem value="tamil">Tamil</SelectItem>
+                <SelectItem value="telugu">Telugu</SelectItem>
+                <SelectItem value="punjabi">Punjabi</SelectItem>
+                <SelectItem value="marathi">Marathi</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isGenerating}>
               <Shuffle className="w-4 h-4 mr-2" />
               {isGenerating ? 'Finding...' : 'Refresh'}
             </Button>
