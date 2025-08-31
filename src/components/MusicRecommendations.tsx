@@ -251,14 +251,21 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         if (response.playlists && response.playlists.items && response.playlists.items.length > 0) {
           console.log(`🎵 ✅ Success! Found ${response.playlists.items.length} playlists with: "${searchQuery}"`);
 
-          return response.playlists.items.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
+          const items = response.playlists?.items ?? [];
+          const validItems = items.filter((p: any) => p && typeof p.id === 'string');
+          if (validItems.length === 0) {
+            console.log(`🎵 ❌ No valid items (some were null or missing id) for: "${searchQuery}"`);
+            continue;
+          }
+
+          return validItems.map((playlist: SpotifyPlaylist): PlaylistDisplay => ({
             id: playlist.id,
-            name: playlist.name,
+            name: playlist.name || 'Untitled',
             description: playlist.description || `Curated ${emotion} playlist`,
-            image: playlist.images[0]?.url || '/placeholder.svg',
-            trackCount: playlist.tracks.total,
-            owner: playlist.owner.display_name,
-            spotifyUrl: playlist.external_urls.spotify
+            image: playlist.images?.[0]?.url || '/placeholder.svg',
+            trackCount: playlist.tracks?.total ?? 0,
+            owner: playlist.owner?.display_name || 'Unknown',
+            spotifyUrl: playlist.external_urls?.spotify || ''
           }));
         } else {
           console.log(`🎵 ❌ No results for: "${searchQuery}"`);
@@ -438,7 +445,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         )}
 
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {playlists.map((playlist) => (
+          {playlists.filter(Boolean).map((playlist) => (
             <div 
               key={playlist.id} 
               className={cn(
