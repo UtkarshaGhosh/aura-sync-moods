@@ -11,7 +11,8 @@ import {
   searchPlaylists,
   getEmotionGenre,
   refreshSpotifyToken,
-  SpotifyPlaylist
+  SpotifyPlaylist,
+  isSpotifyPremium
 } from '@/lib/spotify';
 
 export interface Track {
@@ -133,6 +134,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistDisplay | null>(null);
 
   const [language, setLanguage] = useState<'all' | 'hindi' | 'bengali' | 'tamil' | 'telugu' | 'punjabi' | 'marathi'>('all');
@@ -378,6 +380,14 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       setIsSpotifyConnected(true);
       let currentAccessToken = profile.access_token as string;
 
+      // Determine plan for gating (premium vs free)
+      try {
+        const premium = await isSpotifyPremium(currentAccessToken);
+        setIsPremium(premium);
+      } catch {
+        setIsPremium(false);
+      }
+
       try {
         console.log('🎵 Fetching Spotify playlists...');
         const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
@@ -505,8 +515,9 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={!isSpotifyConnected || playlists.length === 0}
+              disabled={!isSpotifyConnected || !isPremium || playlists.length === 0}
               className="rounded-full px-5 bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+              title={!isSpotifyConnected ? 'Connect Spotify to save' : !isPremium ? 'Spotify Premium required to save/modify playlists' : undefined}
             >
               <Save className="w-4 h-4 mr-2" />
               Save
@@ -592,6 +603,12 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
         {!isSpotifyConnected && (
           <div className="text-xs text-muted-foreground">
             Connect Spotify in your profile to get personalized playlist recommendations.
+          </div>
+        )}
+
+        {isSpotifyConnected && !isPremium && (
+          <div className="text-xs text-muted-foreground">
+            You’re on a free Spotify plan. You can browse playlists, but saving requires Spotify Premium.
           </div>
         )}
       </div>

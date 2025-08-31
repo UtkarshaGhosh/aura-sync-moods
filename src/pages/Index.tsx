@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Music, User, LogOut, ChevronDown, ArrowUp, BarChart3, History, Sparkles, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { createPlaylist, addTracksToPlaylist } from '@/lib/spotify';
+import { createPlaylist, addTracksToPlaylist, isSpotifyPremium } from '@/lib/spotify';
 
 interface Track {
   id: string;
@@ -176,6 +176,15 @@ const Index = () => {
       console.log('No tracks to save - generate some music recommendations first.');
       return;
     }
+
+    // Gate by plan: saving/modifying playlists requires Premium per Spotify policy
+    try {
+      const premium = await isSpotifyPremium(spotifyCredentials.access_token);
+      if (!premium) {
+        console.log('Saving playlists requires Spotify Premium. You can still browse and open playlists.');
+        return;
+      }
+    } catch {}
 
     try {
       const playlistName = `AuraSync - ${currentEmotion.charAt(0).toUpperCase() + currentEmotion.slice(1)} Vibes`;
