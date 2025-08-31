@@ -269,13 +269,18 @@ export const getEmotionGenre = (emotion: string): string => {
 export const searchPlaylists = async (
   accessToken: string,
   query: string,
-  limit: number = 20
+  limit: number = 20,
+  market?: string
 ): Promise<{ playlists: { items: SpotifyPlaylist[] } }> => {
   const params = new URLSearchParams({
     q: query,
     type: 'playlist',
     limit: limit.toString()
   });
+
+  if (market) {
+    params.append('market', market);
+  }
 
   return spotifyApiRequest(`/search?${params.toString()}`, accessToken);
 };
