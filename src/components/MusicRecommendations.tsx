@@ -380,6 +380,14 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
       setIsSpotifyConnected(true);
       let currentAccessToken = profile.access_token as string;
 
+      // Determine plan for gating (premium vs free)
+      try {
+        const premium = await isSpotifyPremium(currentAccessToken);
+        setIsPremium(premium);
+      } catch {
+        setIsPremium(false);
+      }
+
       try {
         console.log('🎵 Fetching Spotify playlists...');
         const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
