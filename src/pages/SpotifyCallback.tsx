@@ -68,6 +68,10 @@ const SpotifyCallback: React.FC = () => {
 
         // Get user profile from Spotify
         const spotifyProfile = await getSpotifyProfile(tokenData.access_token);
+        // Cache plan locally for gating (no DB schema changes needed)
+        if (spotifyProfile?.product) {
+          localStorage.setItem('spotify_product', spotifyProfile.product);
+        }
 
         // Update user profile with Spotify data
         const { error: updateError } = await supabase
