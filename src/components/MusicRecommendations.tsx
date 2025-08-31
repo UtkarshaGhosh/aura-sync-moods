@@ -605,6 +605,12 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
             Connect Spotify in your profile to get personalized playlist recommendations.
           </div>
         )}
+
+        {isSpotifyConnected && !isPremium && (
+          <div className="text-xs text-muted-foreground">
+            You’re on a free Spotify plan. You can browse playlists, but saving requires Spotify Premium.
+          </div>
+        )}
       </div>
     </Card>
   );
