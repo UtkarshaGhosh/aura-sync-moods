@@ -134,6 +134,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistDisplay | null>(null);
 
   const [language, setLanguage] = useState<'all' | 'hindi' | 'bengali' | 'tamil' | 'telugu' | 'punjabi' | 'marathi'>('all');
