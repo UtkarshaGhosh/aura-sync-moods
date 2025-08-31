@@ -152,6 +152,7 @@ const Profile: React.FC = () => {
         console.error('Error disconnecting Spotify:', error);
         toast.error('Failed to disconnect Spotify');
       } else {
+        try { localStorage.removeItem('spotify_product'); } catch {}
         setProfile(prev => prev ? {
           ...prev,
           spotify_user_id: null,
