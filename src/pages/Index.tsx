@@ -177,6 +177,15 @@ const Index = () => {
       return;
     }
 
+    // Gate by plan: saving/modifying playlists requires Premium per Spotify policy
+    try {
+      const premium = await isSpotifyPremium(spotifyCredentials.access_token);
+      if (!premium) {
+        console.log('Saving playlists requires Spotify Premium. You can still browse and open playlists.');
+        return;
+      }
+    } catch {}
+
     try {
       const playlistName = `AuraSync - ${currentEmotion.charAt(0).toUpperCase() + currentEmotion.slice(1)} Vibes`;
       const playlistDescription = `AI-generated playlist for your ${currentEmotion} mood. Created by AuraSync on ${new Date().toLocaleDateString()}`;
