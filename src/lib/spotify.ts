@@ -20,6 +20,7 @@ export interface SpotifyUser {
   display_name: string;
   email: string;
   images: Array<{ url: string; width: number; height: number }>;
+  product?: 'premium' | 'free' | 'open' | string;
 }
 
 export interface SpotifyTrack {
@@ -170,6 +171,25 @@ export const spotifyApiRequest = async (
 // Get current user profile
 export const getSpotifyProfile = async (accessToken: string): Promise<SpotifyUser> => {
   return spotifyApiRequest('/me', accessToken);
+};
+
+// Helper: determine if current user is Spotify Premium
+export const isSpotifyPremium = async (
+  accessToken?: string
+): Promise<boolean> => {
+  try {
+    if (accessToken) {
+      const me = await getSpotifyProfile(accessToken);
+      if (me?.product) {
+        localStorage.setItem('spotify_product', me.product);
+      }
+      return me?.product === 'premium';
+    }
+    const cached = localStorage.getItem('spotify_product');
+    return cached === 'premium';
+  } catch {
+    return false;
+  }
 };
 
 // Get recommendations based on seed data
