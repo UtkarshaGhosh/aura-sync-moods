@@ -1,38 +1,44 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Music, Mail, Lock, User, ShieldCheck, RotateCcw } from 'lucide-react';
+import { Music, Mail, Lock, User, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const Auth: React.FC = () => {
+  const [tab, setTab] = useState<'signin' | 'signup' | 'changepw'>('signin');
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [signupError, setSignupError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState('');
 
-  // OTP states for Sign Up
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupOtp, setSignupOtp] = useState('');
-  const [signupAwaitingOtp, setSignupAwaitingOtp] = useState(false);
-
-  // Change password flow states
+  // Change password flow states (email link confirmation)
   const [cpEmail, setCpEmail] = useState('');
-  const [cpStage, setCpStage] = useState<'request' | 'verify' | 'reset'>('request');
-  const [cpOtp, setCpOtp] = useState('');
+  const [cpStage, setCpStage] = useState<'request' | 'reset'>('request');
   const [cpPassword, setCpPassword] = useState('');
   const [cpPassword2, setCpPassword2] = useState('');
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
+
+  // Detect redirect from Supabase password recovery link
+  useEffect(() => {
+    const type = searchParams.get('type');
+    const reset = searchParams.get('reset_password');
+    if (type === 'recovery' || reset === '1') {
+      setTab('changepw');
+      setCpStage('reset');
+    }
+  }, [searchParams]);
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -67,6 +73,7 @@ const Auth: React.FC = () => {
         password,
         options: {
           data: { display_name: displayName },
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
 
@@ -92,61 +99,18 @@ const Auth: React.FC = () => {
           toast.error('Sign up failed', { description: error.message });
         }
       } else {
-        // Triggered confirmation (OTP if configured). Ask for OTP input.
-        setSignupEmail(email);
-        setSignupAwaitingOtp(true);
-        setSignupSuccess('We sent a one-time code to your email. Enter it below to verify your account.');
-        toast.success('Account created. Check your email for the OTP.');
-      }
-    } catch (err) {
-      toast.error('An unexpected error occurred', {
-        description: 'Please try again later.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifySignupOtp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!signupEmail || signupOtp.trim().length === 0) return;
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: signupEmail,
-        token: signupOtp.trim(),
-        type: 'signup',
-      });
-
-      if (error) {
-        toast.error('Invalid or expired code', { description: error.message });
-      } else {
-        toast.success('Email verified');
-        // If session exists, navigate to home; otherwise prompt sign in
-        if (data?.session) {
-          navigate('/');
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          const errorMsg = 'An account with this email address already exists. Please sign in instead.';
+          setSignupError(errorMsg);
+          toast.error('Account Already Exists', { description: errorMsg });
         } else {
-          setSignupSuccess('Your email is verified. You can now sign in.');
-          setSignupAwaitingOtp(false);
+          const successMsg = 'Please check your email and click the confirmation link to activate your account.';
+          setSignupSuccess(successMsg);
+          toast.success('Account created!', { description: successMsg });
         }
       }
-    } catch (err) {
-      toast.error('Verification failed', { description: 'Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendSignupOtp = async () => {
-    if (!signupEmail) return;
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: signupEmail });
-      if (error) {
-        toast.error('Could not resend code', { description: error.message });
-      } else {
-        toast.success('A new code was sent to your email');
-      }
+    } catch {
+      toast.error('An unexpected error occurred', { description: 'Please try again later.' });
     } finally {
       setIsLoading(false);
     }
@@ -167,11 +131,15 @@ const Auth: React.FC = () => {
         if (error.message.includes('Invalid login credentials')) {
           toast.error('Invalid credentials', {
             description:
-              "Please check your email and password. If you just signed up, make sure you've verified your email.",
+              "Please check your email and password. If you just signed up, make sure you've confirmed your email address.",
           });
         } else if (error.message.toLowerCase().includes('not confirmed')) {
-          toast.error('Email not verified', {
-            description: 'Please verify your email with the OTP we sent.',
+          toast.error('Email not confirmed', {
+            description: 'Please check your email and click the confirmation link before signing in.',
+          });
+        } else if (error.message.includes('User not found')) {
+          toast.error('Account not found', {
+            description: 'No account found with this email address. Please sign up first.',
           });
         } else {
           toast.error('Sign in failed', { description: error.message });
@@ -180,14 +148,14 @@ const Auth: React.FC = () => {
         toast.success('Welcome back!');
         navigate('/');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred', { description: 'Please try again later.' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Change Password: request OTP (uses email OTP sign-in to create a session)
+  // Change Password: send confirmation email (recovery link), then allow reset on return
   const handleCpRequest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validateEmail(cpEmail)) {
@@ -196,41 +164,15 @@ const Auth: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: cpEmail,
-        options: { shouldCreateUser: false },
+      const { error } = await supabase.auth.resetPasswordForEmail(cpEmail, {
+        redirectTo: `${window.location.origin}/auth?reset_password=1`,
       });
       if (error) {
-        toast.error('Failed to send code', { description: error.message });
+        toast.error('Failed to send reset email', { description: error.message });
       } else {
-        setCpStage('verify');
-        toast.success('OTP sent to your email');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCpVerify = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!cpEmail || cpOtp.trim().length === 0) return;
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: cpEmail,
-        token: cpOtp.trim(),
-        type: 'email',
-      });
-      if (error) {
-        toast.error('Invalid or expired code', { description: error.message });
-      } else {
-        // We have a session now
-        if (data?.session) {
-          setCpStage('reset');
-          toast.success('Email verified');
-        } else {
-          toast.error('Verification did not create a session');
-        }
+        toast.success('Password reset email sent', {
+          description: 'Check your inbox and follow the confirmation link.',
+        });
       }
     } finally {
       setIsLoading(false);
@@ -254,13 +196,12 @@ const Auth: React.FC = () => {
         toast.error('Failed to update password', { description: error.message });
       } else {
         toast.success('Password changed successfully');
-        // Optional: sign out and send user to sign-in
         await supabase.auth.signOut();
         setCpStage('request');
         setCpEmail('');
-        setCpOtp('');
         setCpPassword('');
         setCpPassword2('');
+        setTab('signin');
       }
     } finally {
       setIsLoading(false);
@@ -284,7 +225,7 @@ const Auth: React.FC = () => {
 
         <Card className="glass border-border/50">
           <div className="p-6">
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -347,121 +288,75 @@ const Auth: React.FC = () => {
                   </div>
                 )}
 
-                {!signupAwaitingOtp ? (
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Display Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-name"
-                          name="displayName"
-                          type="text"
-                          placeholder="Your Name"
-                          className="pl-10"
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Display Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-name"
+                        name="displayName"
+                        type="text"
+                        placeholder="Your Name"
+                        className="pl-10"
+                        required
+                        disabled={isLoading}
+                      />
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-email"
-                          name="email"
-                          type="email"
-                          placeholder="your@email.com"
-                          className={`pl-10 ${emailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                          required
-                          disabled={isLoading}
-                          onChange={(e) => {
-                            const email = e.target.value;
-                            if (email && !validateEmail(email)) {
-                              setEmailError('Please enter a valid email address');
-                            } else {
-                              setEmailError('');
-                            }
-                          }}
-                        />
-                      </div>
-                      {emailError && <p className="text-sm text-red-500">{emailError}</p>}
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-email"
+                        name="email"
+                        type="email"
+                        placeholder="your@email.com"
+                        className={`pl-10 ${emailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                        required
+                        disabled={isLoading}
+                        onChange={(e) => {
+                          const email = e.target.value;
+                          if (email && !validateEmail(email)) {
+                            setEmailError('Please enter a valid email address');
+                          } else {
+                            setEmailError('');
+                          }
+                        }}
+                      />
                     </div>
+                    {emailError && <p className="text-sm text-red-500">{emailError}</p>}
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-password"
-                          name="password"
-                          type="password"
-                          placeholder="••••••••"
-                          className="pl-10"
-                          minLength={6}
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-password"
+                        name="password"
+                        type="password"
+                        placeholder="••••••••"
+                        className="pl-10"
+                        minLength={6}
+                        required
+                        disabled={isLoading}
+                      />
                     </div>
+                  </div>
 
-                    <Button type="submit" className="w-full" disabled={isLoading || !!emailError}>
-                      <Music className="w-4 h-4 mr-2" />
-                      {isLoading ? 'Creating account...' : 'Create Account'}
-                    </Button>
+                  <Button type="submit" className="w-full" disabled={isLoading || !!emailError}>
+                    <Music className="w-4 h-4 mr-2" />
+                    {isLoading ? 'Creating account...' : 'Create Account'}
+                  </Button>
 
-                    <div className="text-xs text-muted-foreground text-center mt-3 p-2 bg-muted/20 rounded">
-                      <p>Each email address can only be used for one account.</p>
-                      <p>We will send a one-time code to verify your email.</p>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={handleVerifySignupOtp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-otp">Enter 6-digit code sent to {signupEmail}</Label>
-                      <div className="relative">
-                        <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-otp"
-                          name="otp"
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]{6}"
-                          maxLength={6}
-                          placeholder="123456"
-                          className="pl-10 tracking-widest text-center"
-                          value={signupOtp}
-                          onChange={(e) => setSignupOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <button type="button" className="text-primary hover:underline" onClick={handleResendSignupOtp} disabled={isLoading}>
-                          Resend code
-                        </button>
-                        <button
-                          type="button"
-                          className="text-muted-foreground hover:underline"
-                          onClick={() => {
-                            setSignupAwaitingOtp(false);
-                            setSignupOtp('');
-                          }}
-                          disabled={isLoading}
-                        >
-                          Go back
-                        </button>
-                      </div>
-                    </div>
-
-                    <Button type="submit" className="w-full" disabled={isLoading || signupOtp.length !== 6}>
-                      <ShieldCheck className="w-4 h-4 mr-2" />
-                      Verify Email
-                    </Button>
-                  </form>
-                )}
+                  <div className="text-xs text-muted-foreground text-center mt-3 p-2 bg-muted/20 rounded">
+                    <p>Each email address can only be used for one account.</p>
+                    <p>You'll receive a confirmation email to activate your account.</p>
+                  </div>
+                </form>
               </TabsContent>
 
               <TabsContent value="changepw">
@@ -483,63 +378,10 @@ const Auth: React.FC = () => {
                           disabled={isLoading}
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground">We'll send a one-time code to confirm it's you.</p>
+                      <p className="text-xs text-muted-foreground">We'll email you a secure link to confirm your identity.</p>
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading}>
-                      <ShieldCheck className="w-4 h-4 mr-2" />
-                      Send Code
-                    </Button>
-                  </form>
-                )}
-
-                {cpStage === 'verify' && (
-                  <form onSubmit={handleCpVerify} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="cp-otp">Enter code sent to {cpEmail}</Label>
-                      <div className="relative">
-                        <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="cp-otp"
-                          name="cp-otp"
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]{6}"
-                          maxLength={6}
-                          placeholder="123456"
-                          className="pl-10 tracking-widest text-center"
-                          value={cpOtp}
-                          onChange={(e) => setCpOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <button
-                          type="button"
-                          className="text-primary hover:underline"
-                          onClick={async () => {
-                            setIsLoading(true);
-                            try {
-                              const { error } = await supabase.auth.signInWithOtp({ email: cpEmail, options: { shouldCreateUser: false } });
-                              if (error) toast.error('Could not resend code', { description: error.message });
-                              else toast.success('A new code was sent');
-                            } finally {
-                              setIsLoading(false);
-                            }
-                          }}
-                          disabled={isLoading}
-                        >
-                          Resend code
-                        </button>
-                        <button type="button" className="text-muted-foreground hover:underline" onClick={() => setCpStage('request')} disabled={isLoading}>
-                          Change email
-                        </button>
-                      </div>
-                    </div>
-
-                    <Button type="submit" className="w-full" disabled={isLoading || cpOtp.length !== 6}>
-                      <ShieldCheck className="w-4 h-4 mr-2" />
-                      Verify
+                      Send Reset Link
                     </Button>
                   </form>
                 )}
