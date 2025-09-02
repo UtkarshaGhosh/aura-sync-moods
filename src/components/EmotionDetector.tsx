@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, Unlock } from 'lucide-react';
+import { Camera, CameraOff, Smile, Frown, Meh, Zap, AlertTriangle, Unlock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as faceapi from 'face-api.js';
 
@@ -14,7 +14,6 @@ const emotionEmojis = [
   { emotion: 'happy', icon: Smile, label: 'Happy', color: 'text-yellow-400' },
   { emotion: 'sad', icon: Frown, label: 'Sad', color: 'text-blue-400' },
   { emotion: 'neutral', icon: Meh, label: 'Neutral', color: 'text-gray-400' },
-  { emotion: 'calm', icon: Heart, label: 'Calm', color: 'text-green-400' },
   { emotion: 'surprised', icon: Zap, label: 'Surprised', color: 'text-purple-400' },
   { emotion: 'angry', icon: AlertTriangle, label: 'Angry', color: 'text-red-400' },
 ];
@@ -33,6 +32,9 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isEmotionLocked, setIsEmotionLocked] = useState(false);
   const emotionLockedRef = useRef(false);
+  const pendingEmotionRef = useRef<string | null>(null);
+  const currentEmotionRef = useRef<string | null>(null);
+  const MIN_CONFIDENCE = 0.55;
 
   // UI state
   const [emotionChanged, setEmotionChanged] = useState(false);
@@ -126,7 +128,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       // Check environment and security requirements
       const envInfo = getEnvironmentInfo();
-      addDebugLog(`🌍 Environment: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
+      addDebugLog(`���� Environment: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
 
       if (!envInfo.isSecure) {
         addDebugLog('⚠️ Not on secure connection - camera access blocked');
@@ -324,6 +326,11 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     addDebugLog('✅ Webcam stopped successfully');
   };
 
+  // Keep current emotion ref in sync for confirmation logic
+  useEffect(() => {
+    currentEmotionRef.current = detectedEmotion;
+  }, [detectedEmotion]);
+
   // Real emotion detection with face-api.js
   const startEmotionDetection = () => {
     if (!modelsLoaded || !videoRef.current || !canvasRef.current) {
@@ -370,7 +377,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         // Detect faces and expressions
         addDebugLog('🤖 Running face detection...');
         const detections = await faceapi
-          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }))
+          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.6 }))
           .withFaceExpressions();
 
         addDebugLog(`👤 Detected ${detections.length} faces`);
@@ -420,13 +427,23 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             const confidence = expressions[maxExpression as keyof typeof expressions];
 
-            addDebugLog(`��� Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
+            addDebugLog(`🎯 Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
 
-            // Lower threshold for better detection
-            if (confidence > 0.2) {
-              setDetectedEmotion(mappedEmotion);
-              onEmotionDetected(mappedEmotion, 'webcam');
-              addDebugLog(`✅ Emotion updated to: ${mappedEmotion}`);
+            // Higher threshold and 2-frame confirmation to improve accuracy
+            if (confidence >= MIN_CONFIDENCE) {
+              if (currentEmotionRef.current !== mappedEmotion) {
+                if (pendingEmotionRef.current === mappedEmotion) {
+                  setDetectedEmotion(mappedEmotion);
+                  onEmotionDetected(mappedEmotion, 'webcam');
+                  pendingEmotionRef.current = null;
+                  addDebugLog(`✅ Emotion confirmed and updated to: ${mappedEmotion}`);
+                } else {
+                  pendingEmotionRef.current = mappedEmotion;
+                  addDebugLog(`⏳ Pending confirmation for: ${mappedEmotion}`);
+                }
+              } else {
+                pendingEmotionRef.current = null;
+              }
             } else {
               addDebugLog(`⚠️ Confidence too low: ${(confidence * 100).toFixed(1)}%`);
             }
@@ -489,7 +506,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       // Detect faces and expressions
       addDebugLog('🤖 Running manual face detection...');
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }))
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.6 }))
         .withFaceExpressions();
 
       const ctx = canvas.getContext('2d');
@@ -530,7 +547,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
           addDebugLog(`🎭 Manual detection result: ${maxExpression} (${(confidence * 100).toFixed(1)}%)`);
 
-          if (confidence > 0.15) {
+          if (confidence >= 0.5) {
             setDetectedEmotion(mappedEmotion);
             onEmotionDetected(mappedEmotion, 'webcam');
             addDebugLog(`✅ Manual detection successful: ${mappedEmotion}`);
