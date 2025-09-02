@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, Lock, Unlock } from 'lucide-react';
+import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, Unlock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as faceapi from 'face-api.js';
 
