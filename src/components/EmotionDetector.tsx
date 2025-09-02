@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle } from 'lucide-react';
+import { Camera, CameraOff, Smile, Frown, Meh, Zap, AlertTriangle, Unlock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as faceapi from 'face-api.js';
 
@@ -14,7 +14,6 @@ const emotionEmojis = [
   { emotion: 'happy', icon: Smile, label: 'Happy', color: 'text-yellow-400' },
   { emotion: 'sad', icon: Frown, label: 'Sad', color: 'text-blue-400' },
   { emotion: 'neutral', icon: Meh, label: 'Neutral', color: 'text-gray-400' },
-  { emotion: 'calm', icon: Heart, label: 'Calm', color: 'text-green-400' },
   { emotion: 'surprised', icon: Zap, label: 'Surprised', color: 'text-purple-400' },
   { emotion: 'angry', icon: AlertTriangle, label: 'Angry', color: 'text-red-400' },
 ];
@@ -31,7 +30,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
-  
+  const [isEmotionLocked, setIsEmotionLocked] = useState(false);
+  const emotionLockedRef = useRef(false);
+  const MIN_CONFIDENCE = 0.55;
+
   // UI state
   const [emotionChanged, setEmotionChanged] = useState(false);
   const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
@@ -124,7 +126,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
       // Check environment and security requirements
       const envInfo = getEnvironmentInfo();
-      addDebugLog(`🌍 Environment: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
+      addDebugLog(`���� Environment: ${envInfo.browserInfo}, HTTPS: ${envInfo.isHTTPS}, Localhost: ${envInfo.isLocalhost}`);
 
       if (!envInfo.isSecure) {
         addDebugLog('⚠️ Not on secure connection - camera access blocked');
@@ -332,6 +334,9 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
     addDebugLog('🧠 Emotion detection loop started');
     intervalRef.current = setInterval(async () => {
+      if (emotionLockedRef.current) {
+        return;
+      }
       if (!videoRef.current || !canvasRef.current || !modelsLoaded) {
         addDebugLog('⚠️ Detection loop: missing requirements, skipping...');
         return;
@@ -365,7 +370,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
         // Detect faces and expressions
         addDebugLog('🤖 Running face detection...');
         const detections = await faceapi
-          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }))
+          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.6 }))
           .withFaceExpressions();
 
         addDebugLog(`👤 Detected ${detections.length} faces`);
@@ -415,10 +420,9 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             const mappedEmotion = emotionMap[maxExpression] || 'neutral';
             const confidence = expressions[maxExpression as keyof typeof expressions];
 
-            addDebugLog(`��� Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
+            addDebugLog(`🎯 Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
 
-            // Lower threshold for better detection
-            if (confidence > 0.2) {
+            if (confidence >= MIN_CONFIDENCE) {
               setDetectedEmotion(mappedEmotion);
               onEmotionDetected(mappedEmotion, 'webcam');
               addDebugLog(`✅ Emotion updated to: ${mappedEmotion}`);
@@ -484,7 +488,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
       // Detect faces and expressions
       addDebugLog('🤖 Running manual face detection...');
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }))
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.6 }))
         .withFaceExpressions();
 
       const ctx = canvas.getContext('2d');
@@ -525,7 +529,7 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
           addDebugLog(`🎭 Manual detection result: ${maxExpression} (${(confidence * 100).toFixed(1)}%)`);
 
-          if (confidence > 0.15) {
+          if (confidence >= 0.5) {
             setDetectedEmotion(mappedEmotion);
             onEmotionDetected(mappedEmotion, 'webcam');
             addDebugLog(`✅ Manual detection successful: ${mappedEmotion}`);
@@ -559,6 +563,19 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     }
   };
 
+  const handleDetectEmotionToggle = async () => {
+    if (!isEmotionLocked) {
+      await detectEmotionNow();
+      setIsEmotionLocked(true);
+    } else {
+      setIsEmotionLocked(false);
+    }
+  };
+
+  // Keep lock ref in sync
+  useEffect(() => {
+    emotionLockedRef.current = isEmotionLocked;
+  }, [isEmotionLocked]);
 
   // Handle emotion changes with animations
   useEffect(() => {
@@ -714,14 +731,14 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             {isWebcamActive && (
               <div className="flex gap-2">
                 <Button
-                  onClick={detectEmotionNow}
+                  onClick={handleDetectEmotionToggle}
                   variant="default"
                   size="sm"
-                  disabled={isDetecting || !modelsLoaded || !isWebcamActive}
+                  disabled={isDetecting || (!modelsLoaded && !isEmotionLocked) || !isWebcamActive}
                   className="flex-1 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
                 >
-                  <Zap className="w-4 h-4 mr-2" />
-                  {isDetecting ? 'Detecting...' : 'Detect Emotion'}
+                  {isEmotionLocked ? <Unlock className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                  {isDetecting ? 'Detecting...' : isEmotionLocked ? 'Resume Detection' : 'Detect Emotion'}
                 </Button>
               </div>
             )}
@@ -747,6 +764,12 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                   <div className="flex items-center justify-center space-x-2 text-xs mt-1">
                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                     <span className="text-blue-400">Analyzing facial expressions...</span>
+                  </div>
+                )}
+                {isEmotionLocked && (
+                  <div className="flex items-center justify-center space-x-2 text-xs mt-1">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                    <span className="text-yellow-400">Emotion Locked</span>
                   </div>
                 )}
               </div>
