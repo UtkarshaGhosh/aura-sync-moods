@@ -32,8 +32,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isEmotionLocked, setIsEmotionLocked] = useState(false);
   const emotionLockedRef = useRef(false);
-  const pendingEmotionRef = useRef<string | null>(null);
-  const currentEmotionRef = useRef<string | null>(null);
   const MIN_CONFIDENCE = 0.55;
 
   // UI state
@@ -326,11 +324,6 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     addDebugLog('✅ Webcam stopped successfully');
   };
 
-  // Keep current emotion ref in sync for confirmation logic
-  useEffect(() => {
-    currentEmotionRef.current = detectedEmotion;
-  }, [detectedEmotion]);
-
   // Real emotion detection with face-api.js
   const startEmotionDetection = () => {
     if (!modelsLoaded || !videoRef.current || !canvasRef.current) {
@@ -429,21 +422,10 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
             addDebugLog(`🎯 Dominant emotion: ${maxExpression} (${(confidence * 100).toFixed(1)}%) -> ${mappedEmotion}`);
 
-            // Higher threshold and 2-frame confirmation to improve accuracy
             if (confidence >= MIN_CONFIDENCE) {
-              if (currentEmotionRef.current !== mappedEmotion) {
-                if (pendingEmotionRef.current === mappedEmotion) {
-                  setDetectedEmotion(mappedEmotion);
-                  onEmotionDetected(mappedEmotion, 'webcam');
-                  pendingEmotionRef.current = null;
-                  addDebugLog(`✅ Emotion confirmed and updated to: ${mappedEmotion}`);
-                } else {
-                  pendingEmotionRef.current = mappedEmotion;
-                  addDebugLog(`⏳ Pending confirmation for: ${mappedEmotion}`);
-                }
-              } else {
-                pendingEmotionRef.current = null;
-              }
+              setDetectedEmotion(mappedEmotion);
+              onEmotionDetected(mappedEmotion, 'webcam');
+              addDebugLog(`✅ Emotion updated to: ${mappedEmotion}`);
             } else {
               addDebugLog(`⚠️ Confidence too low: ${(confidence * 100).toFixed(1)}%`);
             }
