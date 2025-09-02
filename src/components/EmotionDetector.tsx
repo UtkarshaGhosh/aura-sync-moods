@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle } from 'lucide-react';
+import { Camera, CameraOff, Smile, Frown, Meh, Heart, Zap, AlertTriangle, Lock, Unlock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as faceapi from 'face-api.js';
 
@@ -31,7 +31,9 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
-  
+  const [isEmotionLocked, setIsEmotionLocked] = useState(false);
+  const emotionLockedRef = useRef(false);
+
   // UI state
   const [emotionChanged, setEmotionChanged] = useState(false);
   const [previousEmotion, setPreviousEmotion] = useState<string | null>(null);
@@ -332,6 +334,9 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
 
     addDebugLog('🧠 Emotion detection loop started');
     intervalRef.current = setInterval(async () => {
+      if (emotionLockedRef.current) {
+        return;
+      }
       if (!videoRef.current || !canvasRef.current || !modelsLoaded) {
         addDebugLog('⚠️ Detection loop: missing requirements, skipping...');
         return;
@@ -559,6 +564,19 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
     }
   };
 
+  const handleDetectEmotionToggle = async () => {
+    if (!isEmotionLocked) {
+      await detectEmotionNow();
+      setIsEmotionLocked(true);
+    } else {
+      setIsEmotionLocked(false);
+    }
+  };
+
+  // Keep lock ref in sync
+  useEffect(() => {
+    emotionLockedRef.current = isEmotionLocked;
+  }, [isEmotionLocked]);
 
   // Handle emotion changes with animations
   useEffect(() => {
@@ -714,14 +732,14 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
             {isWebcamActive && (
               <div className="flex gap-2">
                 <Button
-                  onClick={detectEmotionNow}
+                  onClick={handleDetectEmotionToggle}
                   variant="default"
                   size="sm"
-                  disabled={isDetecting || !modelsLoaded || !isWebcamActive}
+                  disabled={isDetecting || (!modelsLoaded && !isEmotionLocked) || !isWebcamActive}
                   className="flex-1 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
                 >
-                  <Zap className="w-4 h-4 mr-2" />
-                  {isDetecting ? 'Detecting...' : 'Detect Emotion'}
+                  {isEmotionLocked ? <Unlock className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                  {isDetecting ? 'Detecting...' : isEmotionLocked ? 'Resume Detection' : 'Detect Emotion'}
                 </Button>
               </div>
             )}
@@ -747,6 +765,12 @@ const EmotionDetector: React.FC<EmotionDetectorProps> = ({
                   <div className="flex items-center justify-center space-x-2 text-xs mt-1">
                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                     <span className="text-blue-400">Analyzing facial expressions...</span>
+                  </div>
+                )}
+                {isEmotionLocked && (
+                  <div className="flex items-center justify-center space-x-2 text-xs mt-1">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                    <span className="text-yellow-400">Emotion Locked</span>
                   </div>
                 )}
               </div>
