@@ -216,7 +216,7 @@ const Auth: React.FC = () => {
       <div className="fixed inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
 
       <div className="relative z-10 w-full max-w-md">
-        <div className="flex items-center justify-end mb-2">
+        <div className="flex items-center justify-center mb-2">
           <LanguageSelector />
         </div>
         <div className="text-center mb-8">
