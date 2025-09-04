@@ -259,17 +259,32 @@ export const addTracksToPlaylist = async (
   });
 };
 
-// Map emotion to Spotify audio features
-export const getEmotionAudioFeatures = (emotion: string) => {
-  switch (emotion.toLowerCase()) {
-    case 'happy': return { targetValence: 0.8, targetEnergy: 0.7 };
-    case 'sad': return { targetValence: 0.2, targetEnergy: 0.3 };
-    case 'angry': return { targetValence: 0.1, targetEnergy: 0.9 };
-    case 'calm': return { targetValence: 0.6, targetEnergy: 0.2 };
-    case 'excited': return { targetValence: 0.9, targetEnergy: 0.9 };
-    case 'neutral':
-    default: return { targetValence: 0.5, targetEnergy: 0.5 };
-  }
+// Map emotion to Spotify audio features with optional intensity (0..1)
+export const getEmotionAudioFeatures = (emotion: string, intensity: number = 0.5) => {
+  const e = emotion.toLowerCase();
+  const base = (() => {
+    switch (e) {
+      case 'happy': return { targetValence: 0.8, targetEnergy: 0.7 };
+      case 'sad': return { targetValence: 0.2, targetEnergy: 0.3 };
+      case 'angry': return { targetValence: 0.1, targetEnergy: 0.9 };
+      case 'calm': return { targetValence: 0.6, targetEnergy: 0.2 };
+      case 'excited': return { targetValence: 0.9, targetEnergy: 0.9 };
+      case 'neutral':
+      default: return { targetValence: 0.5, targetEnergy: 0.5 };
+    }
+  })();
+
+  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+  // Adjust energy more strongly with intensity; center at 0.5
+  const energy = clamp(base.targetEnergy + (intensity - 0.5) * 0.8, 0, 1);
+
+  // For negatively valenced emotions, higher intensity should not increase valence
+  const negativeEmotion = e === 'sad' || e === 'angry';
+  const valenceAdjust = (intensity - 0.5) * (negativeEmotion ? -0.6 : 0.6);
+  const valence = clamp(base.targetValence + valenceAdjust, 0, 1);
+
+  return { targetValence: valence, targetEnergy: energy };
 };
 
 // Map emotion to genre for playlist search
