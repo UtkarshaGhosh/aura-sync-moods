@@ -12,8 +12,11 @@ import {
   getEmotionGenre,
   refreshSpotifyToken,
   SpotifyPlaylist,
-  isSpotifyPremium
+  isSpotifyPremium,
+  getEmotionAudioFeatures
 } from '@/lib/spotify';
+
+import { Slider } from '@/components/ui/slider';
 
 export interface Track {
   id: string;
@@ -139,6 +142,13 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
   const [language, setLanguage] = useState<'all' | 'hindi' | 'bengali' | 'tamil' | 'telugu' | 'punjabi' | 'marathi'>('all');
   const market = useMemo(() => (language === 'all' ? undefined : 'IN'), [language]);
+
+  const [intensity, setIntensity] = useState<number>(0.5);
+  const [debouncedIntensity, setDebouncedIntensity] = useState<number>(0.5);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedIntensity(intensity), 300);
+    return () => clearTimeout(t);
+  }, [intensity]);
 
   const headerText = useMemo(() => `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} Playlists`, [emotion]);
 
@@ -266,12 +276,27 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     }
   };
 
-  const getSpotifyPlaylists = async (accessToken: string) => {
+  const getSpotifyPlaylists = async (accessToken: string, currentIntensity: number) => {
     const baseTerms = getRealisticSearchTerms(emotion);
     const langTerms = getLanguageKeywords();
-    const searchTerms = baseTerms.map(term => langTerms.length ? `${langTerms[0]} ${term}` : term);
 
-    console.log(`🎵 Searching for ${emotion} mood with terms:`, searchTerms, 'language:', language);
+    const { targetEnergy } = getEmotionAudioFeatures(emotion, currentIntensity);
+    const intensityKeywords = targetEnergy > 0.65
+      ? ['high energy', 'energetic', 'pump up', 'workout', 'party']
+      : targetEnergy < 0.35
+        ? ['chill', 'relaxing', 'soft', 'acoustic', 'mellow']
+        : [];
+
+    let searchTerms = baseTerms;
+    if (intensityKeywords.length) {
+      const prefix = intensityKeywords[0];
+      searchTerms = baseTerms.map(term => `${prefix} ${term}`);
+    }
+    if (langTerms.length) {
+      searchTerms = searchTerms.map(term => `${langTerms[0]} ${term}`);
+    }
+
+    console.log(`🎵 Searching for ${emotion} mood with terms:`, searchTerms, 'language:', language, 'intensity:', currentIntensity.toFixed(2));
 
     for (const searchQuery of searchTerms) {
       try {
@@ -390,7 +415,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
       try {
         console.log('🎵 Fetching Spotify playlists...');
-        const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
+        const newPlaylists = await getSpotifyPlaylists(currentAccessToken, debouncedIntensity);
         console.log(`🎵 Got ${newPlaylists.length} playlists from Spotify`);
         setAllPlaylists(newPlaylists);
         showBatch(newPlaylists, 0);
@@ -422,7 +447,7 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
 
             currentAccessToken = newTokens.access_token;
             console.log('🎵 Token refreshed, retrying playlist fetch...');
-            const newPlaylists = await getSpotifyPlaylists(currentAccessToken);
+            const newPlaylists = await getSpotifyPlaylists(currentAccessToken, debouncedIntensity);
             setAllPlaylists(newPlaylists);
             showBatch(newPlaylists, 0);
             toast.success('Spotify connection refreshed!', {
@@ -450,13 +475,13 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [emotion, user, moodHistoryId, language]);
+  }, [emotion, user, moodHistoryId, language, debouncedIntensity]);
 
   useEffect(() => {
     if (emotion) {
       generatePlaylists();
     }
-  }, [emotion, language, generatePlaylists]);
+  }, [emotion, language, debouncedIntensity, generatePlaylists]);
 
   const handleSave = () => {
     if (playlists.length === 0) {
@@ -501,6 +526,13 @@ const MusicRecommendations: React.FC<MusicRecommendationsProps> = ({
                   <SelectItem value="marathi">Marathi</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="hidden sm:inline text-xs text-muted-foreground">Intensity</span>
+              <div className="w-full sm:w-44 flex items-center gap-2">
+                <Slider min={0} max={1} step={0.01} value={[intensity]} onValueChange={(v) => setIntensity(v[0] ?? 0)} className="w-full" aria-label="Intensity" />
+                <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(intensity * 100)}</span>
+              </div>
             </div>
             <Button
               variant="outline"
